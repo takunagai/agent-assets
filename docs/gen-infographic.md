@@ -34,11 +34,11 @@ skills/gen-infographic/
     ├── revision-prompt.md         # 反復修正プロンプト
     ├── structures/                # 構造ブロック（flow / contrast / cycle / grouped-list）
     │   └── _index.md
-    └── styles/                    # スタイルブロック（配布版は実体コピー）
+    └── styles/                    # スタイルブロック（_image-styles への symlink。配布時のみ実体コピー）
         └── _index.md
 ```
 
-> **styles の扱い**: 開発環境では `references/styles/` を共有ライブラリ `_image-styles` への symlink にして複数の画像生成スキルでスタイルを共有します。公開リポには `scripts/sync-styles.sh --embed` で実体コピーを埋め込んで配布可能にしています（このリポの本体は embed 済み）。
+> **styles の扱い**: `references/styles/` は共有スタイルライブラリ `_image-styles`（リポ内の `skills/_image-styles`）への symlink で、複数の画像生成スキルがスタイルを共有します。正本が同じリポ内にあるため symlink のままコミットされ、clone でも解決します。`.skill` パッケージ化時のみ `scripts/sync-styles.sh --embed` で実体コピーへ展開します。
 
 ---
 
