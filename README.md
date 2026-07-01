@@ -59,7 +59,6 @@ ln -s ~/Projects/agent-skills/skills/<name> ~/.agents/skills/<name>
 | obsidian-vault-create | 新しい Obsidian Vault を標準レイアウトで作成。`YYYY-MM-DD-Project` 命名・数値プレフィックスのフォルダ・README/Home・任意で `.obsidian` 設定コピー。`~/Documents` 既定 | [docs/obsidian-vault-create.md](docs/obsidian-vault-create.md) |
 | refund-request | 返金・キャンセル請求メールを、相手企業のポリシー調査の上で交渉力のある文面に。英語・日本語対応、送信前チェックリスト＋4 段階フォローアップ戦略つき | [docs/refund-request.md](docs/refund-request.md) |
 | article-quality-enhancer | 8 テクニック（裏テーマ・対立構造・失敗注入・読者解像度・比喩・数字と固有名詞・逆説・余白）で日本語記事の内容の質を構造的に高める。Vault 連携はオプション | [docs/article-quality-enhancer.md](docs/article-quality-enhancer.md) |
-| note-article-writer | note.com 向け記事を「分析→構造設計→本文執筆→AI 臭排除」の 4 フェーズで生成。外部 API 不要、書き手プロフィールは任意参照 | [docs/note-article-writer.md](docs/note-article-writer.md) |
 | deploy-cloudflare | Next.js + OpenNext 構成専用。git status → ビルド → push → wrangler deploy を自動化。本番/プレビュー対応、`DEPLOY_PROJECT_DIR`/`PRODUCTION_URL` で設定 | [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md) |
 | deploy-astro-cloudflare | Astro + `@astrojs/cloudflare` 構成専用。Workers Builds（GitHub 連携）とローカル `wrangler deploy` の 2 モードに対応 | [docs/deploy-astro-cloudflare.md](docs/deploy-astro-cloudflare.md) |
 | cloudflare-lesson-note | 学習セッションの内容を技術ブログ品質の Obsidian ノートに整形・保存。保存先は `$LESSON_VAULT_PATH` で指定、特定 Vault に非依存 | [docs/cloudflare-lesson-note.md](docs/cloudflare-lesson-note.md) |
