@@ -5,3 +5,6 @@ Thumbs.db
 # Python
 __pycache__/
 *.pyc
+
+# 実行指示書（完了後の正本は Vault の実行指示書アーカイブ）
+handover/
