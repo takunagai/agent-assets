@@ -1,8 +1,8 @@
 # 画像最適化 ガイド
 
-Astro 6.0+ における画像最適化のベストプラクティス。Content Layer API に対応した画像スキーマとパフォーマンス最適化を解説。
+Astro 7 における画像最適化のベストプラクティス。Content Layer API に対応した画像スキーマとパフォーマンス最適化を解説。
 
-> **対応バージョン**: Astro 6.0+
+> **対応バージョン**: Astro 7+
 
 ---
 
@@ -258,10 +258,10 @@ const optimizedBg = await getImage({
 
 ## Content Layer API での画像
 
-### スキーマ定義（Astro 6.0+）
+### スキーマ定義（Astro 7）
 
 ```typescript
-// src/content.config.ts（ファイル名が変更されました）
+// src/content.config.ts（旧 src/content/config.ts は 5→6 で廃止）
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';  // ← astro:content ではなく astro/zod
@@ -341,6 +341,6 @@ const post = await getEntry('blog', 'my-post');
 
 ## 参考リンク
 
-- [Astro Images Guide](https://v6.docs.astro.build/en/guides/images/)
-- [Image Component Reference](https://v6.docs.astro.build/en/reference/components-reference/#image)
-- [astro:assets API](https://v6.docs.astro.build/en/reference/modules/astro-assets/)
+- [Astro Images Guide](https://docs.astro.build/en/guides/images/)
+- [Image Component Reference](https://docs.astro.build/en/reference/components-reference/#image)
+- [astro:assets API](https://docs.astro.build/en/reference/modules/astro-assets/)

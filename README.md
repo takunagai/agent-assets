@@ -59,7 +59,7 @@ ln -s ~/Projects/agent-assets/agents/<name>.md ~/.claude/agents/<name>.md
 |--------|------|-------------|
 | cc-fork-delete | Claude Code のフォークセッションを sid 指定で安全削除（dry-run → 確認 → 実行、既定はゴミ箱退避） | [docs/cc-fork-delete.md](docs/cc-fork-delete.md) |
 | cc-project-relocate | Claude Code のプロジェクトを移動・リネームした後、パスに紐づくセッションログ dir（会話・memory）を新パスへリネーム/マージ。任意で `~/.claude.json` の trust/権限も移行。本体と同一エンコードを node で計算、dry-run → 確認 → 実行 | [docs/cc-project-relocate.md](docs/cc-project-relocate.md) |
-| astro-code-review | Astro 6.0+ プロジェクト（Cloudflare デプロイ対応）のコードを体系的にレビュー。ベストプラクティス違反・パフォーマンス・a11y・型安全性・Astro 6.0 移行問題を検出 | [docs/astro-code-review.md](docs/astro-code-review.md) |
+| astro-code-review | Astro 7+ プロジェクト（Cloudflare Workers デプロイ対応）のコードを体系的にレビュー。ベストプラクティス違反・パフォーマンス・a11y・型安全性・レガシー API（5→6 削除済み）・Astro 7 移行問題（Rust コンパイラ HTML 厳格化・Sätteri・src/fetch.ts 予約名）を検出 | [docs/astro-code-review.md](docs/astro-code-review.md) |
 | gen-nanobanana-images | Google Gemini の画像生成モデル Nano Banana シリーズ（Flash / Flash2 / Pro）で、テキストからの画像生成・画像編集・スタイルリファレンス・マルチターン反復修正を行う。要 `GEMINI_API_KEY` | [docs/gen-nanobanana-images.md](docs/gen-nanobanana-images.md) |
 | gen-infographic | 日本語の文章・メモ・PDF・スクショなどを 1 枚の読みやすい図解画像へ変換。構造（流れ図・対比・循環・一覧）とスタイル（手描き／ミニマル／水彩／設計図風）を独立に組合せ | [docs/gen-infographic.md](docs/gen-infographic.md) |
 | gen-lifestyle-images | 商品のライフスタイル写真を一括生成。ブランド・商品カタログ・シーンをプリセット管理し、セミオート（プラン提示→承認→生成）で量産。要 `GEMINI_API_KEY` | [docs/gen-lifestyle-images.md](docs/gen-lifestyle-images.md) |

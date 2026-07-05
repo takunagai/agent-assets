@@ -1,8 +1,8 @@
 # TypeScript型パターン ガイド
 
-Astro 6.0+ における TypeScript 活用のベストプラクティス。Content Layer API と Zod 4 に対応した型安全なパターンを解説。
+Astro 7 における TypeScript 活用のベストプラクティス。Content Layer API と Zod 4 に対応した型安全なパターンを解説。
 
-> **対応バージョン**: Astro 6.0+, Zod 4.x (`astro/zod`)
+> **対応バージョン**: Astro 7+, Zod 4.x (`import { z } from 'astro/zod'`。v7 で import 経路・バージョンとも変更なし)
 
 ---
 
@@ -91,12 +91,12 @@ interface ContainerProps extends HTMLAttributes<'div'> {}
 
 ## Content Layer API の型安全性
 
-Astro 6.0 では Content Collections が **Content Layer API** に統合されました。
+Astro の Content Collections は **Content Layer API**（loader ベース）で定義する。
 
-### スキーマ定義（Astro 6.0+）
+### スキーマ定義（Astro 7）
 
 ```typescript
-// src/content.config.ts（ファイル名が変更されました）
+// src/content.config.ts（旧 src/content/config.ts は 5→6 で廃止）
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';  // ← astro:content ではなく astro/zod
@@ -127,7 +127,7 @@ export const collections = { blog };
 ```typescript
 import { z } from 'astro/zod';
 
-// Astro 6.0 (Zod 4) での変更
+// Zod 4 での変更（Astro 6 で Zod 4 導入。v7 でも Zod 4.x のまま）
 const schema = z.object({
   // ✅ Zod 4 の新しいバリデーター
   email: z.email(),        // z.string().email() から変更
@@ -350,7 +350,7 @@ const { title, items } = Astro.props;
 
 ## 参考リンク
 
-- [Astro TypeScript Guide](https://v6.docs.astro.build/en/guides/typescript/)
-- [Content Layer API](https://v6.docs.astro.build/en/guides/content-collections/)
-- [TypeScript Configuration](https://v6.docs.astro.build/en/guides/typescript/#type-checking)
+- [Astro TypeScript Guide](https://docs.astro.build/en/guides/typescript/)
+- [Content Layer API](https://docs.astro.build/en/guides/content-collections/)
+- [TypeScript Configuration](https://docs.astro.build/en/guides/typescript/#type-checking)
 - [Zod 4 Changelog](https://zod.dev/v4/changelog)

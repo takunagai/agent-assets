@@ -1,84 +1,75 @@
 # Cloudflare デプロイリファレンス
 
-Astro 6.0+ を Cloudflare Workers / Pages にデプロイするためのベストプラクティス。
+Astro 7 + `@astrojs/cloudflare` v14 を Cloudflare **Workers**（static assets 付き）にデプロイするためのベストプラクティス。
+
+> **対応バージョン**: Astro 7+, @astrojs/cloudflare v14+, wrangler `^4.83.0`。**Cloudflare Pages サポートはアダプター v13 で廃止済み** ─ デプロイ先は Workers 一本。
+>
+> このスキルはコード・設定の**検出**を担当する。デプロイの実行手順（Workers Builds / `wrangler deploy` / プレビュー）は姉妹スキル `deploy-astro-cloudflare` の担当。
 
 ## 概要
 
-Astro 6.0 では Cloudflare Workers サポートが大幅に強化されました。開発サーバー (`astro dev`) が **workerd** (Cloudflare の本番ランタイム) で直接実行されるようになり、開発と本番の差異が解消されています。
+`@astrojs/cloudflare` v14 では、開発サーバー (`astro dev`) と `astro preview` が **workerd**（Cloudflare の本番ランタイム）上で直接動作するため、開発と本番の差異が解消されている。これにより v13 以前の `platformProxy` オプションは不要になり、v14 では**存在しない**（設定に残っていれば移行漏れ）。
 
 ## 基本設定
 
 ### astro.config.mjs
 
 ```javascript
-// astro.config.mjs (Astro 6.0+ / Cloudflare)
+// astro.config.mjs (Astro 7 / @astrojs/cloudflare v14)
 import { defineConfig } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
-  output: 'server', // または 'hybrid'
-  adapter: cloudflare({
-    platformProxy: {
-      enabled: true, // workerd での開発を有効化（推奨）
+  output: 'server', // または 'static'（必要なルートのみ prerender: false）
+  // v14 では adapter に platformProxy を渡さない（workerd 上で dev/preview が動くため不要）
+  adapter: cloudflare(),
+  // CSP 設定（security.csp ─ astro@6.0.0 で追加された stable 機能）
+  security: {
+    csp: {
+      directives: [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+      ],
     },
-  }),
-  // CSP 設定（Astro 6.0 新機能）
-  csp: {
-    directives: {
-      'default-src': ["'self'"],
-      'script-src': ["'self'"],
-      'style-src': ["'self'", "'unsafe-inline'"],
-    }
-  }
+  },
 });
 ```
 
-### wrangler.toml
+### wrangler.jsonc
 
-```toml
-# wrangler.toml
-name = "my-astro-site"
-compatibility_date = "2025-01-01"
-compatibility_flags = ["nodejs_compat"]
+`@astrojs/cloudflare` v14 は `wrangler.jsonc`（JSONC 形式）を標準とする。エントリポイント `main` は統一エントリ `"@astrojs/cloudflare/entrypoints/server"`（旧値 `dist/_worker.js/index.js` は移行漏れ）。`public/.assetsignore` は v14 では不要（旧構成の残骸）。
 
-# KV Namespace
-[[kv_namespaces]]
-binding = "MY_KV"
-id = "your-kv-namespace-id"
-
-# R2 Storage
-[[r2_buckets]]
-binding = "MY_BUCKET"
-bucket_name = "my-bucket"
-
-# D1 Database
-[[d1_databases]]
-binding = "MY_DB"
-database_name = "my-database"
-database_id = "your-database-id"
-
-# Durable Objects
-[[durable_objects.bindings]]
-name = "MY_DURABLE_OBJECT"
-class_name = "MyDurableObject"
-
-# Environment Variables
-[vars]
-PUBLIC_API_URL = "https://api.example.com"
-
-# Secrets (wrangler secret put で設定)
-# SECRET_API_KEY は wrangler secret put SECRET_API_KEY で設定
+```jsonc
+// wrangler.jsonc
+{
+  "name": "my-astro-site",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": "./dist" },
+  "kv_namespaces": [{ "binding": "MY_KV", "id": "your-kv-namespace-id" }],
+  "r2_buckets": [{ "binding": "MY_BUCKET", "bucket_name": "my-bucket" }],
+  "d1_databases": [
+    { "binding": "MY_DB", "database_name": "my-database", "database_id": "your-database-id" }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "MY_DURABLE_OBJECT", "class_name": "MyDurableObject" }]
+  },
+  "vars": { "PUBLIC_API_URL": "https://api.example.com" }
+  // Secrets は wrangler secret put SECRET_API_KEY で設定（ファイルに書かない）
+}
 ```
 
 ---
 
 ## Cloudflare Bindings アクセス
 
-### Astro 6.0+ 推奨パターン
+### Astro 7 推奨パターン
 
 ```astro
 ---
-// Astro 6.0+: cloudflare:workers モジュールを使用
+// Astro 6+/7: cloudflare:workers モジュールを使用
 import { env } from 'cloudflare:workers';
 
 // KV Namespace
@@ -132,8 +123,10 @@ const kv = runtime.env.MY_KV;
 
 | 問題 | 検出パターン | 修正方法 |
 |------|-------------|---------|
-| アダプター未設定 | `adapter` 設定なし | `@astrojs/cloudflare` を追加 |
-| platformProxy 無効 | `platformProxy.enabled: false` | `true` に変更（開発時に workerd 使用） |
+| アダプター未設定 / 旧版 | `adapter` 設定なし、または v13 以前 | `@astrojs/cloudflare` v14+（wrangler `^4.83.0`）を使用 |
+| platformProxy の残骸 | `cloudflare({ platformProxy: {...} })` | 除去（v14 に存在しない。dev/preview は workerd 上で動く） |
+| main 旧値 | `wrangler` の `main` が `dist/_worker.js/index.js` | `"@astrojs/cloudflare/entrypoints/server"` に修正 |
+| .assetsignore の残骸 | `public/.assetsignore` が存在 | v14 では不要のため削除 |
 | prerender 最適化不足 | 静的ページで `prerender: false` | `export const prerender = true` を追加 |
 
 ### Info（ベストプラクティス）
@@ -342,7 +335,8 @@ try {
 
 ## 参考資料
 
-- [Astro Cloudflare Adapter](https://v6.docs.astro.build/en/guides/integrations-guide/cloudflare/)
+- [Astro Cloudflare Adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/)
+- [Astro Route Caching](https://docs.astro.build/en/guides/caching/)
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
 - [Wrangler Configuration](https://developers.cloudflare.com/workers/wrangler/configuration/)
 - [Cloudflare KV](https://developers.cloudflare.com/kv/)

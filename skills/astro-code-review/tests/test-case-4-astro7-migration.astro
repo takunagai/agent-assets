@@ -1,0 +1,24 @@
+---
+// テストケース4: Astro 7 移行チェック（観点 11）
+// 期待される検出:
+// - [C][Astro 7] 未クローズタグ（<span> が閉じられていない）─ v7 Rust コンパイラでビルド不能
+// - [C][Astro 7] 不正ネスト（<p> の中に <div>）─ 自動補正が廃止されビルドエラー
+// - [I][Astro 7] compressHTML: 'jsx' 既定化により、改行に依存したインライン要素間の空白が消える可能性
+//
+// このフィクスチャはレビュースキルが「テキストとして読む」検出対象サンプル。
+// 実際に astro build に通す用途ではない（未クローズタグを意図的に含むため）。
+//
+// なお、次の 2 つは .astro 単体では表現できないプロジェクトレベルの検出対象:
+// - [W][Astro 7] astro.config の markdown.remarkPlugins / rehypePlugins（Sätteri 非互換の可能性）
+// - [W][Astro 7] src/fetch.ts の予約名衝突（advanced routing 目的でない同名ファイル）
+---
+
+<!-- 不正ネスト: <p> の中に <div> -->
+<p>説明文<div>ブロック要素</div></p>
+
+<!-- 未クローズタグ: <span> が閉じられていない -->
+<div><span>ここが閉じられていない</div>
+
+<!-- compressHTML: 'jsx' で改行が空白として保持されない可能性 -->
+<span>hello</span>
+<em>world</em>

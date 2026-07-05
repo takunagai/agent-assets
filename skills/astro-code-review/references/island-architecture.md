@@ -1,8 +1,8 @@
 # Islandアーキテクチャ ガイド
 
-Astro 6.0+ の核となる Island アーキテクチャの詳細ガイド。Server Islands (`server:defer`) が**安定版**として利用可能。
+Astro 7 の核となる Island アーキテクチャの詳細ガイド。Server Islands (`server:defer`) が**安定版**として利用可能。
 
-> **対応バージョン**: Astro 6.0+
+> **対応バージョン**: Astro 7+
 
 ---
 
@@ -115,11 +115,11 @@ Astroは「Islands Architecture」を採用し、ページの大部分を静的H
 
 ---
 
-## server:defer（Server Islands）- Astro 6.0 安定版
+## server:defer（Server Islands）- stable
 
 **サーバーサイドでの遅延レンダリング**
 
-> **Astro 6.0 で安定版になりました。** 実験的フラグなしで使用可能です。
+> **Astro 6 で安定版になりました（v7 でも stable）。** 実験的フラグなしで使用可能です。
 
 ```astro
 <UserAvatar server:defer />
@@ -248,7 +248,7 @@ import UserGreeting from '../components/UserGreeting.astro';
 
 ## 参考リンク
 
-- [Astro Islands](https://v6.docs.astro.build/en/concepts/islands/)
-- [Client Directives](https://v6.docs.astro.build/en/reference/directives-reference/#client-directives)
-- [Server Islands](https://v6.docs.astro.build/en/guides/server-islands/)
-- [Cloudflare Adapter](https://v6.docs.astro.build/en/guides/integrations-guide/cloudflare/)
+- [Astro Islands](https://docs.astro.build/en/concepts/islands/)
+- [Client Directives](https://docs.astro.build/en/reference/directives-reference/#client-directives)
+- [Server Islands](https://docs.astro.build/en/guides/server-islands/)
+- [Cloudflare Adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/)

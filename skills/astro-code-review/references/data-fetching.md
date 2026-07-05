@@ -1,14 +1,14 @@
 # データ取得パターン ガイド
 
-Astro 6.0+ におけるデータ取得のベストプラクティス。Content Layer API と Live Collections を活用した最新パターンを解説。
+Astro 7 におけるデータ取得のベストプラクティス。Content Layer API と Live Collections を活用した最新パターンを解説。
 
-> **対応バージョン**: Astro 6.0+, @astrojs/cloudflare v13+
+> **対応バージョン**: Astro 7+, @astrojs/cloudflare v14+
 
 ---
 
 ## Content Layer API
 
-Astro 6.0 では Content Collections が **Content Layer API** に統合されました。`src/content.config.ts` でローダーベースの定義を使用します。
+Astro の Content Collections は **Content Layer API**（loader ベース）で定義する。設定ファイルは `src/content.config.ts`（旧 `src/content/config.ts` は 5→6 で廃止済み）。
 
 ```typescript
 // src/content.config.ts
@@ -187,9 +187,9 @@ try {
 
 ---
 
-## Live Collections（Astro 6.0 安定版）
+## Live Collections（stable）
 
-Live Collections は Astro 6.0 で**安定版**になりました。CMS やデータベースからリアルタイムにデータを取得する際に使用します。
+Live Collections は Astro 6 で**安定版**になり（5.10 で experimental 導入）、v7 でも stable。CMS やデータベースからリアルタイムにデータを取得する際に使用します。
 
 ### defineLiveCollection()
 
@@ -286,7 +286,7 @@ if (error) {
 
 ## Cloudflare Bindings 連携
 
-Cloudflare Workers / Pages でのデータ取得パターン。
+Cloudflare Workers でのデータ取得パターン。
 
 ### KV からのデータ取得
 
@@ -585,8 +585,8 @@ const data = await response.json();
 
 ## 参考リンク
 
-- [Content Layer API](https://v6.docs.astro.build/en/guides/content-collections/)
-- [Data Fetching](https://v6.docs.astro.build/en/guides/data-fetching/)
-- [SSR Adapters](https://v6.docs.astro.build/en/guides/on-demand-rendering/)
-- [Cloudflare Adapter](https://v6.docs.astro.build/en/guides/integrations-guide/cloudflare/)
+- [Content Layer API](https://docs.astro.build/en/guides/content-collections/)
+- [Data Fetching](https://docs.astro.build/en/guides/data-fetching/)
+- [SSR Adapters](https://docs.astro.build/en/guides/on-demand-rendering/)
+- [Cloudflare Adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/)
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)

@@ -1,6 +1,6 @@
 # astro-code-review
 
-**Astro 6.0+（ベータ版）専用**のコードレビュースキルです。Cloudflare Workers / Pages をメインのデプロイ先として想定し、Astro プロジェクトのコードを体系的にレビューして、ベストプラクティス違反・パフォーマンス問題・アクセシビリティ欠陥・型安全性の欠如・Astro 6.0 移行問題を検出します。
+**Astro 7+（GA）専用**のコードレビュースキルです。Cloudflare **Workers**（static assets 付き）をメインのデプロイ先として想定し、Astro プロジェクトのコードを体系的にレビューして、ベストプラクティス違反・パフォーマンス問題・アクセシビリティ欠陥・型安全性の欠如・レガシー API（Astro 5/6 で削除済みのパターン）・Astro 7 移行問題（Rust コンパイラの HTML 厳格化・Sätteri・`src/fetch.ts` 予約名ほか）を検出します。
 
 ---
 
@@ -8,13 +8,14 @@
 
 | 項目 | バージョン |
 |------|-----------|
-| Astro | 6.0.0-beta+ |
-| Node.js | 22.12.0+ |
-| デプロイ先 | Cloudflare Workers / Pages（推奨） |
-| アダプター | @astrojs/cloudflare v13+ |
-| Zod | 4.x |
+| Astro | 7.0.0+（GA） |
+| Node.js | 22.12.0+（`astro@7` の engines。奇数メジャー非対応） |
+| デプロイ先 | Cloudflare Workers（static assets 付き。Pages は非対応） |
+| アダプター | @astrojs/cloudflare v14+ |
+| wrangler | ^4.83.0+（adapter v14 の peer 要件） |
+| Zod | 4.x（`import { z } from 'astro/zod'`。v7 で変更なし） |
 
-> **注意**: Astro 5.x 以前のプロジェクトでは移行ガイダンスを提供します。
+> **注意**: 検出は二層構成です。Astro 5.x/6.x 時代の削除済み API は**レガシー検出**、Astro 6 → 7 の破壊的変更は**Astro 7 移行チェック**として扱います。**Cloudflare Pages サポートはアダプター v13 で廃止済み**（デプロイ先は Workers 一本）。
 
 ---
 
@@ -49,7 +50,7 @@ skills/astro-code-review/
 │   └── cloudflare-deployment.md
 ├── assets/
 │   └── review-report-template.md   # レビューレポートの出力テンプレート
-└── tests/            # レビュー検証用の .astro フィクスチャ
+└── tests/            # レビュー検証用の .astro フィクスチャ（基本 / Island / データ取得 / Astro 7 移行）
 ```
 
 ---
@@ -73,12 +74,13 @@ skills/astro-code-review/
 
 ## 主な機能
 
-- **11 カテゴリ**のレビュー観点（Island、TypeScript、画像、SEO、a11y、セキュリティ、**Astro 6.0 Migration**、**Cloudflare** 等）
+- **12 カテゴリ**のレビュー観点（Island、TypeScript、画像、SEO、a11y、セキュリティ、**Legacy API (5→6)**、**Astro 7 Migration (6→7)**、**Cloudflare** 等）
 - **3 段階の重要度分類**（Critical / Warning / Info）
 - **具体的な修正例**付きのレポート出力
 - **自動修正モード**（`--fix`）で安全な修正を適用
-- **Astro 6.0 移行チェック**: 削除 API（`Astro.glob()`、`<ViewTransitions />` 等）の検出
-- **Cloudflare 最適化**: `cloudflare:workers` パターン、Node.js 非互換 API の検出
+- **レガシー API 検出（5→6）**: 削除 API（`Astro.glob()`、`<ViewTransitions />`、legacy Content Collections 等）の検出
+- **Astro 7 移行チェック（6→7）**: Rust コンパイラの HTML 厳格化（未クローズ・不正ネスト）、Sätteri 非互換の remark/rehype、`src/fetch.ts` 予約名、`compressHTML: 'jsx'`、Vite 8、`@astrojs/db` 削除、`astro:transitions` 内部 API の検出
+- **Cloudflare Workers 最適化**: `cloudflare:workers` パターン、Node.js 非互換 API、`platformProxy`/`main` 旧値/`.assetsignore` の残骸、Route Caching（`cacheCloudflare()`）の検出
 
 ---
 
@@ -102,8 +104,9 @@ skills/astro-code-review/
 | SEO | `<title>`、OGP タグの欠如 |
 | Accessibility | `<html lang>` 欠如、見出し階層 |
 | Security | `set:html` の未サニタイズ使用 |
-| **Astro 6.0 Migration** | `Astro.glob()`、`<ViewTransitions />`、legacy Content Collections |
-| **Cloudflare** | `Astro.locals.runtime`、Node.js 専用 API |
+| **Legacy API (5→6)** | `Astro.glob()`、`<ViewTransitions />`、legacy Content Collections |
+| **Astro 7 Migration (6→7)** | 未クローズ/不正ネスト、Sätteri 非互換の remark/rehype、`src/fetch.ts` 予約名、`compressHTML: 'jsx'` |
+| **Cloudflare** | `Astro.locals.runtime`、Node.js 専用 API、`platformProxy`/`main` 旧値の残骸 |
 
 ---
 
@@ -113,5 +116,7 @@ skills/astro-code-review/
 
 ## 外部リファレンス
 
-- [Astro 6 Upgrade Guide](https://v6.docs.astro.build/en/guides/upgrade-to/v6/)
-- [Cloudflare Adapter](https://v6.docs.astro.build/en/guides/integrations-guide/cloudflare/)
+- [Astro 7 リリース記事](https://astro.build/blog/astro-7/)
+- [Astro v7 Upgrade Guide](https://docs.astro.build/en/guides/upgrade-to/v7/)
+- [Astro v6 Upgrade Guide（5→6 レガシー検出の出典）](https://docs.astro.build/en/guides/upgrade-to/v6/)
+- [Cloudflare Adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/)
