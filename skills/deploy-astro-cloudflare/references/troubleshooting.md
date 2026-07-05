@@ -41,7 +41,7 @@ Astro 7 は Rust 製コンパイラ・Rust 製 Markdown プロセッサ（Sätte
 
 | 症状 | 原因・対処 |
 |---|---|
-| サードパーティ統合（Sentry 等）のサーバーラップが壊れる | 内部の仮想エントリが `astrojs-ssr-virtual-entry` → `virtual:cloudflare/worker-entry` に変更。旧名に依存する統合は対応バージョンへ更新 |
+| サードパーティ統合（Sentry 等）のサーバーラップが壊れる | v14 で内部の仮想エントリ名が変わり、旧エントリ名に依存する統合が機能しなくなる事例がある（統合側が観測した新名は `virtual:cloudflare/worker-entry`。adapter CHANGELOG には明記されず、統合側 issue での観測）。統合側を v14 対応バージョンへ更新する |
 | `astro dev` が OOM でクラッシュ | advanced routing（`src/fetch.ts`）+ 大規模アプリで dev server が OOM する事例（withastro/astro #17181、"unable to reproduce" でクローズ）。最新アダプタ（v14.1.1 以上）へ更新のうえ、再現時は issue を参照 |
 | ランタイムキャッシュがレスポンスをブロック | v14 は `ExecutionContext.waitUntil` をキャッシュプロバイダへ転送し、stale-while-revalidate 等をバックグラウンド化する。ブロックが見られる場合はアダプタ更新を確認 |
 

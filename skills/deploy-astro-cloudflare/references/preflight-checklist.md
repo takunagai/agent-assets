@@ -73,10 +73,12 @@ cat wrangler.jsonc wrangler.json wrangler.toml 2>/dev/null
 
 ```bash
 wrangler whoami          # 認証アカウントの確認
+wrangler --version       # v4.83.0 以上（@astrojs/cloudflare v14 の peer 要件）
 node -v                  # v22.12.0 以上であること（奇数メジャー v23 等は非対応）
 ```
 
 - 認証切れ: `wrangler login`（CI では `CLOUDFLARE_API_TOKEN` を使用）。
+- wrangler が古い: `@astrojs/cloudflare@14` は `wrangler ^4.83.0` を peer 依存に要求する。`npm ls wrangler` で確認し、古ければ更新する。
 - Node が古い / 奇数メジャー: 対応バージョンへ切り替える（nvm / Volta 等）。
 
 ## 5. `keep_vars` 確認（ダッシュボード vars 運用時）
