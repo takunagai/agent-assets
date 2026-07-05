@@ -81,6 +81,7 @@ ln -s ~/Projects/agent-assets/agents/<name>.md ~/.claude/agents/<name>.md
 | サブエージェント | 概要 | ドキュメント |
 |------------------|------|-------------|
 | article-fact-checker | 記事草稿の公開直前ファクトチェック。数値・固有名詞・API 仕様・引用を一次情報（Context7 最優先）で検証し、主張ごとに 正/疑/誤/検証不能 を信頼度・出典 URL 付きで返す。草稿は書き換えない | [docs/article-fact-checker.md](docs/article-fact-checker.md) |
+| git-version-control | コミット・ブランチ・PR を独立コンテキストで実行。手順は git-workflow スキルに従う（Conventional Commits の日本語コミット、コミット前チェック、AI 署名なし）。作業完了時にプロアクティブに起動してコミットを提案する | [docs/git-version-control.md](docs/git-version-control.md) |
 
 ## 共有ライブラリ（スキルではない）
 
