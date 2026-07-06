@@ -46,12 +46,15 @@ PATTERNS=(
     "private[_-]?key"
 )
 
+STAGED_FILES=$(git diff --cached --name-only)
 HARDCODE_FOUND=false
-for pattern in "${PATTERNS[@]}"; do
-    if git diff --cached --name-only | xargs grep -l -i -E "$pattern" 2>/dev/null; then
-        HARDCODE_FOUND=true
-    fi
-done
+if [ -n "$STAGED_FILES" ]; then
+    for pattern in "${PATTERNS[@]}"; do
+        if echo "$STAGED_FILES" | xargs grep -l -i -E "$pattern" 2>/dev/null; then
+            HARDCODE_FOUND=true
+        fi
+    done
+fi
 
 if [ "$HARDCODE_FOUND" = true ]; then
     echo -e "${RED}[FAIL] ハードコードされた機密情報が見つかりました${NC}"
