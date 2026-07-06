@@ -70,7 +70,8 @@ ln -s ~/Projects/agent-assets/agents/<name>.md ~/.claude/agents/<name>.md
 | article-quality-enhancer | 8 テクニック（裏テーマ・対立構造・失敗注入・読者解像度・比喩・数字と固有名詞・逆説・余白）で日本語記事の内容の質を構造的に高める。Vault 連携はオプション | [docs/article-quality-enhancer.md](docs/article-quality-enhancer.md) |
 | deploy-nextjs-cloudflare | Next.js + OpenNext 構成専用。公式 CLI（opennextjs-cloudflare deploy / upload）で本番デプロイと Preview URL 発行を自動化。フレームワーク検出・認証確認などプリフライトつき deploy.sh 同梱 | [docs/deploy-nextjs-cloudflare.md](docs/deploy-nextjs-cloudflare.md) |
 | deploy-astro-cloudflare | Astro 7 + `@astrojs/cloudflare` v14 構成専用。Workers Builds（GitHub 連携）・ローカル `wrangler deploy`・プレビューの 3 モード + プリフライト検証（バージョン・wrangler.jsonc・認証）・デプロイ完了確認・ロールバック | [docs/deploy-astro-cloudflare.md](docs/deploy-astro-cloudflare.md) |
-| cloudflare-lesson-note | 学習セッションの内容を技術ブログ品質の Obsidian ノートに整形・保存。保存先は `$LESSON_VAULT_PATH` で指定、特定 Vault に非依存 | [docs/cloudflare-lesson-note.md](docs/cloudflare-lesson-note.md) |
+| cloudflare-lesson-tutor | Cloudflare 学習カリキュラムの授業運営。Dashboard.md で現在地把握 → 一次情報で鮮度検証（retrieval 優先・フレームワークは公式 docs を正）→ 対話形式で 1 セクション授業 → 保存案内。Vault へは読み取りのみ | [docs/cloudflare-lesson-tutor.md](docs/cloudflare-lesson-tutor.md) |
+| cloudflare-lesson-note | 学習セッションの内容を技術ブログ品質の Obsidian ノートに整形・保存し、Dashboard.md の進捗を更新（Vault への唯一のライター）。上書き保護・鮮度メタデータ（`verified`）つき。保存先は `$LESSON_VAULT_PATH` で指定、特定 Vault に非依存 | [docs/cloudflare-lesson-note.md](docs/cloudflare-lesson-note.md) |
 | print-card-comp | 印刷物（名刺・しおり・ポストカード・DL カード等）の表裏デザインカンプを依頼内容から一括生成。QR 生成（segno）・PIL 合成（文字化けなし）・入稿指示書まで。背景は gen-nanobanana-images / gpt-image-2 を委譲利用 | [docs/print-card-comp.md](docs/print-card-comp.md) |
 | mac-gui-router | Mac の GUI 操作・スクショ依頼の方式判定ルーター。公式 computer-use / 自作ループ（screencapture + CGEvent）/ chrome-devtools から最適を選び、操作 = 公式・撮影 = 自作のハイブリッド（操作マニュアル作成）にも対応。要ヘルパー 3 種（付属手順でビルド） | [docs/mac-gui-router.md](docs/mac-gui-router.md) |
 
@@ -89,3 +90,4 @@ ln -s ~/Projects/agent-assets/agents/<name>.md ~/.claude/agents/<name>.md
 | ライブラリ | 概要 | ドキュメント |
 |------------|------|-------------|
 | _image-styles | 画像生成スキル群が共有するスタイル定義（手描きマーカー／ミニマル・フラット／水彩／設計図風）。構造非依存で、生成プロンプトの `{{STYLE}}` に差し込んで使う | [README](skills/_image-styles/README.md) ／ [カタログ](skills/_image-styles/_index.md) |
+| _lesson-methods | Cloudflare 学習の 2 スキル（cloudflare-lesson-tutor／cloudflare-lesson-note）が共有する教授法リソース（難解な概念を平易に伝える実行ガイド）。各スキルの `references/` から相対 symlink で参照 | [README](skills/_lesson-methods/README.md) |
