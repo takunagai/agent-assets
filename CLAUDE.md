@@ -44,6 +44,8 @@ ln -s ~/Projects/agent-assets/agents/<name>.md ~/.claude/agents/<name>.md
 3. `README.md` のカタログ表（スキル一覧・サブエージェント一覧）に行を追加・更新する
 4. 新規なら symlink を登録する
 
+手順 2 は pre-commit フック（`.githooks/pre-commit`）が機械的に検査する ─ 実装をステージしたのに対応する `docs/<name>.md` が同一コミットに無いと失敗する。docs の抽象度に影響しない変更だと判断した場合のみ `SKIP_DOCS_CHECK=1 git commit` で明示スキップ（その場合も README カタログ行の陳腐化は目視確認。`--no-verify` は使わない）。clone 直後は `git config core.hooksPath .githooks` で有効化する。導入経緯: 姉妹リポジトリ agent-assets-private で、ホットフィックス時にチェックリストの想起が飛んだ実例（2026-07-07）があったため機械化し、両リポジトリにミラー配置した。
+
 ## 機密の扱い（公開リポジトリ）
 
 - 機密値・個人情報・案件固有情報は**一切置かない**。API キー等の実値が必要なスキルは環境変数で受け取る設計にする（例: `GEMINI_API_KEY`）

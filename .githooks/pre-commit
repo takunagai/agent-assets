@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# pre-commit — docs 追随ガード
+#
+# skills/<name>/**・agents/<name>.md・commands/<name>.md をステージしたのに、
+# 対応する docs/<name>.md が同じコミットにステージされていない場合に止める。
+# CLAUDE.md「スキル・エージェント追加/変更時のチェックリスト」手順 2 の機械的強制。
+# 経緯: 2026-07-07 の実機検証ホットフィックス（b7ec832）で追随チェックが漏れたため導入。
+#
+# docs に影響しない変更（コメント修正・docs の抽象度より下の実装詳細など）は、
+# 判断した上で明示的にスキップする:
+#   SKIP_DOCS_CHECK=1 git commit ...
+#
+# 有効化（clone 直後に 1 回）: git config core.hooksPath .githooks
+# macOS 標準 bash 3.2 で動くこと（配列・連想配列は使わない）。
+
+set -euo pipefail
+
+if [ "${SKIP_DOCS_CHECK:-0}" = "1" ]; then
+  echo "[pre-commit] SKIP_DOCS_CHECK=1 — docs 追随チェックを明示スキップ（README カタログ行の陳腐化は自分の目で確認すること）"
+  exit 0
+fi
+
+staged=$(git diff --cached --name-only)
+
+# 対象 <name> を抽出（skills/ は _ 始まりの共有リソースを除外）
+names=$(
+  {
+    printf '%s\n' "$staged" | sed -n 's|^skills/\([^_/][^/]*\)/.*|\1|p'
+    printf '%s\n' "$staged" | sed -n 's|^agents/\([^/]*\)\.md$|\1|p'
+    printf '%s\n' "$staged" | sed -n 's|^commands/\([^/]*\)\.md$|\1|p'
+  } | sort -u
+)
+
+missing=""
+for name in $names; do
+  if ! printf '%s\n' "$staged" | grep -qx "docs/${name}.md"; then
+    missing="${missing}${name} "
+  fi
+done
+
+if [ -n "$missing" ]; then
+  {
+    echo "[pre-commit] ✗ docs 追随チェック失敗"
+    echo "  次の実装がステージされていますが、対応する docs がコミットに含まれていません:"
+    for m in $missing; do
+      echo "    - ${m}  →  docs/${m}.md"
+    done
+    echo "  対応:"
+    echo "    a) docs/<name>.md を実装に追随させて git add する（README.md のカタログ行の概要も確認）"
+    echo "    b) docs に影響しない変更だと判断したら: SKIP_DOCS_CHECK=1 git commit ..."
+  } >&2
+  exit 1
+fi
+
+exit 0
