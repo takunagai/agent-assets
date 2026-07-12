@@ -245,7 +245,7 @@ def parse_args(config=None):
     parser.add_argument(
         "-a",
         "--aspect-ratio",
-        default=defaults["aspect_ratio"],
+        default=None,
         help=f"アスペクト比 (default: {defaults['aspect_ratio']}, choices: {', '.join(ALL_ASPECT_RATIOS)})",
     )
     parser.add_argument(
@@ -291,10 +291,13 @@ def parse_args(config=None):
 
     args = parser.parse_args()
 
-    # -m / -N の CLI 明示有無を記録してから、未指定なら config/builtin へ解決する。
+    # -m / -N / -a の CLI 明示有無を記録してから、未指定なら config/builtin へ解決する。
     args.model_explicit = args.model is not None
     if args.model is None:
         args.model = defaults["model"]
+    args.aspect_ratio_explicit = args.aspect_ratio is not None
+    if args.aspect_ratio is None:
+        args.aspect_ratio = defaults["aspect_ratio"]
     args.num_images_explicit = args.num_images is not None
     if args.num_images is None:
         args.num_images = defaults["num_images"]
@@ -354,6 +357,21 @@ def _augment_prompt(prompt, has_input, has_reference, input_count=0, ref_count=0
     return prompt
 
 
+def _peek_session_model_alias(session_path):
+    """セッションファイルからモデルエイリアスだけを先読みする。
+
+    バリデーション用の best-effort。存在しない・壊れている等の異常は None を返し、
+    正式なエラー報告は validate_args の存在確認と load_session に委ねる。
+    """
+    try:
+        with open(session_path, "r") as f:
+            data = json.load(f)
+        alias = data.get("model_alias")
+        return alias if alias in MODEL_SPECS else None
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return None
+
+
 def validate_args(args):
     """引数のバリデーション。エラー時は sys.exit(1)。"""
     # API キー確認
@@ -368,37 +386,49 @@ def validate_args(args):
         )
         sys.exit(1)
 
-    spec = MODEL_SPECS[args.model]
+    # セッション継続時は、実際に使われるモデル（セッション側）の spec で検査する。
+    # -m/-a/-s は generate_chat が無視するため、ここでも検査対象から外す
+    # （CLI/config のモデルで検査すると、無視されるはずの指定で誤って落ちる）。
+    session_alias = _peek_session_model_alias(args.session) if args.session else None
+    effective_model = session_alias or args.model
+    spec = MODEL_SPECS[effective_model]
 
-    # アスペクト比
-    if args.aspect_ratio not in spec.aspect_ratios:
+    if not args.session:
+        # アスペクト比
+        if args.aspect_ratio not in spec.aspect_ratios:
+            print(
+                f"Error: Invalid aspect ratio '{args.aspect_ratio}' for {effective_model}. "
+                f"Valid: {', '.join(spec.aspect_ratios)}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        # 画像サイズ
+        if args.image_size:
+            if not spec.image_sizes:
+                print(
+                    f"Error: --image-size is not available for the {effective_model} model.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            if args.image_size not in spec.image_sizes:
+                print(
+                    f"Error: Invalid image size '{args.image_size}' for {effective_model}. "
+                    f"Valid: {', '.join(spec.image_sizes)}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+    elif args.aspect_ratio_explicit or args.image_size:
         print(
-            f"Error: Invalid aspect ratio '{args.aspect_ratio}' for {args.model}. "
-            f"Valid: {', '.join(spec.aspect_ratios)}",
+            "Note: セッション継続では -a / -s は無視されます"
+            "（ターン 1 の設定を引き継ぎます）。",
             file=sys.stderr,
         )
-        sys.exit(1)
 
-    # 画像サイズ
-    if args.image_size:
-        if not spec.image_sizes:
-            print(
-                f"Error: --image-size is not available for the {args.model} model.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        if args.image_size not in spec.image_sizes:
-            print(
-                f"Error: Invalid image size '{args.image_size}' for {args.model}. "
-                f"Valid: {', '.join(spec.image_sizes)}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-    # Google Search
+    # Google Search（継続時も毎ターン効くため effective_model で検査する）
     if args.google_search and not spec.supports_google_search:
         print(
-            f"Error: --google-search is not available for the {args.model} model.",
+            f"Error: --google-search is not available for the {effective_model} model.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -406,7 +436,7 @@ def validate_args(args):
     # Image Search
     if args.image_search and not spec.supports_image_search:
         print(
-            f"Error: --image-search is not available for the {args.model} model. "
+            f"Error: --image-search is not available for the {effective_model} model. "
             f"Image Search is only supported by flash2.",
             file=sys.stderr,
         )
@@ -416,7 +446,7 @@ def validate_args(args):
     if args.thinking_level:
         if args.thinking_level not in spec.thinking_levels:
             print(
-                f"Error: Invalid thinking level '{args.thinking_level}' for {args.model}. "
+                f"Error: Invalid thinking level '{args.thinking_level}' for {effective_model}. "
                 f"Valid: {', '.join(spec.thinking_levels)}",
                 file=sys.stderr,
             )
@@ -466,7 +496,7 @@ def validate_args(args):
         total_count = len(all_images)
         if total_count > spec.max_input_images:
             print(
-                f"Error: {args.model} モデルの画像上限は{spec.max_input_images}枚です"
+                f"Error: {effective_model} モデルの画像上限は{spec.max_input_images}枚です"
                 f"（指定: {total_count}枚）。",
                 file=sys.stderr,
             )
@@ -499,7 +529,7 @@ def validate_args(args):
     # マルチターン対応チェック
     if (args.chat or args.session) and not spec.supports_multi_turn:
         print(
-            f"Error: Multi-turn chat (--chat/--session) is not available for the {args.model} model.",
+            f"Error: Multi-turn chat (--chat/--session) is not available for the {effective_model} model.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -510,8 +540,10 @@ def validate_args(args):
         out_dir.mkdir(parents=True, exist_ok=True)
         print(f"Created output directory: {out_dir}")
 
-    # 4K 時のタイムアウト自動調整（-s 4K を明示した経路。継続時は generate_chat 側で再調整）
-    if args.image_size == "4K" and args.timeout < 420:
+    # 4K 時のタイムアウト自動調整（-s 4K を明示した経路）。
+    # 継続時は -s が無視されるためここでは調整せず、generate_chat がセッションの
+    # 実効解像度を見て調整する。
+    if not args.session and args.image_size == "4K" and args.timeout < 420:
         args.timeout = 420
         print("Note: Timeout auto-adjusted to 420s for 4K generation.")
 
@@ -627,18 +659,24 @@ def save_session(session_path, session_data):
         json.dump(session_data, f, indent=2, ensure_ascii=False)
 
 
-def _build_filename(output_name, turn_num, call_index, img_count):
-    """保存ファイル名を組み立てる（-n / タイムスタンプ / _v / _t / 連番）。"""
+def _build_filename(output_name, turn_num, call_index, img_count, timestamp=None):
+    """保存ファイル名を組み立てる（-n / タイムスタンプ / _v / _t / 連番）。
+
+    timestamp は -N の全バリエーションで同一の値を共有させるため呼び出し側から渡す
+    （秒をまたいでもファイル名の TS が揃う）。
+    """
     variant = f"_v{call_index + 1}" if call_index > 0 else ""
     turn = f"_t{turn_num}" if turn_num > 0 else ""
     if output_name:
         base = f"{output_name}{turn}{variant}"
         return f"{base}.png" if img_count == 1 else f"{base}_{img_count}.png"
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"nanobanana_{timestamp}{turn}{variant}_{img_count}.png"
 
 
-def extract_and_save_images(interaction, output_dir, output_name, turn_num=0, call_index=0):
+def extract_and_save_images(
+    interaction, output_dir, output_name, turn_num=0, call_index=0, timestamp=None
+):
     """Interaction のレスポンスから画像を抽出して保存する。
 
     steps を走査して model_output の image/text を収集し、画像ゼロなら
@@ -686,7 +724,7 @@ def extract_and_save_images(interaction, output_dir, output_name, turn_num=0, ca
             print(f"Error decoding image: {e}", file=sys.stderr)
             continue
 
-        filename = _build_filename(output_name, turn_num, call_index, idx)
+        filename = _build_filename(output_name, turn_num, call_index, idx, timestamp)
         out_path = Path(output_dir) / filename
         # 既存ファイルの黙殺上書きを防ぐ（連番で回避）
         out_path, renamed = _unique_output_path(out_path)
@@ -813,6 +851,8 @@ def generate_single_shot(args, api_key):
     generation_config = build_generation_config(args.thinking_level)
 
     all_saved_paths = []
+    # -N の全バリエーションで同一のタイムスタンプを共有する（秒またぎ対策）
+    run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     for i in range(args.num_images):
         if args.num_images > 1:
@@ -837,7 +877,11 @@ def generate_single_shot(args, api_key):
         try:
             interaction = api_call_with_retry(client, create_kwargs)
             saved_paths, text_parts = extract_and_save_images(
-                interaction, args.output_dir, args.output_name, call_index=i
+                interaction,
+                args.output_dir,
+                args.output_name,
+                call_index=i,
+                timestamp=run_timestamp,
             )
             all_saved_paths.extend(saved_paths)
             for text in text_parts:
