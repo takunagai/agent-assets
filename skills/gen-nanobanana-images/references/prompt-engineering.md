@@ -49,11 +49,11 @@ Example constraint string: `Avoid: low quality, blurry, deformed hands, watermar
 
 ## Model-Specific Tips
 
-**Flash2 (Recommended)** - Supports detailed prompts (3-5 sentences). Best balance of quality, speed, and features. Use `--image-search` for product/real-world object accuracy. Supports ultra-wide/tall ratios (1:4, 4:1, 1:8, 8:1) for banners and tall visuals. Use `512px` size for icons and thumbnails.
+**Flash2 (Nano Banana 2, Recommended)** - Supports detailed prompts (3-5 sentences). Best balance of quality, speed, and features. Use `--image-search` for product/real-world object accuracy. Supports ultra-wide/tall ratios (1:4, 4:1, 1:8, 8:1) for banners and tall visuals. Use `512px` size for icons and thumbnails.
 
-**Pro** - Use detailed prompts (3-6 sentences). Specify technical details for best results. Ideal for final production images with maximum text rendering accuracy.
+**Pro (Nano Banana Pro)** - Use detailed prompts (3-6 sentences). Specify technical details for best results. Ideal for final production images with maximum text rendering accuracy. Only model with official style-reference slots (up to 3).
 
-**Lite** - Fastest and cheapest ($0.0336/image, 1K only). Keep prompts concise; ideal for rapid draft iteration and high-volume batches. No search grounding — describe factual details explicitly in the prompt.
+**Lite (Nano Banana 2 Lite)** - Fastest (sub-2s) and cheapest ($0.0336/image, 1K only). Keep prompts concise; ideal for rapid draft iteration and high-volume batches. No search grounding — describe factual details explicitly in the prompt.
 
 ## Image Editing Prompts
 
@@ -155,4 +155,4 @@ Keep the subject sharp and well-defined.
 
 - Name specific visual elements: "color palette", "lighting", "texture", "brush strokes", "composition", "framing"
 - Avoid vague references: "make it look like the reference" is less effective than "apply the warm earth tones and soft diffused lighting from the reference"
-- All models accept up to 14 reference/input images; Flash2 or Pro give the best reference fidelity
+- All models accept up to 14 reference/input images total, but only **Pro** has official style-reference slots (up to 3). Prefer Pro for true style transfer; Flash2 (object 10 + person 4) and Lite (object 14) still pick up a reference's look, but as an object reference rather than a dedicated style input

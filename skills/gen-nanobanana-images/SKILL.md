@@ -7,12 +7,12 @@ description: "Generate and edit images using Google Gemini image models (Nano Ba
 
 ## Overview
 
-Generate and edit images using Google's Nano Banana series (GA models, released 2026-05-28): Flash2/Nano Banana 2 (recommended, balanced speed+features), Pro (production quality, highest text accuracy), and Lite/Nano Banana Lite (fastest, cheapest, 1K draft). Supports text-to-image generation, image editing with input images, and multi-turn iterative refinement with session persistence.
+Generate and edit images using Google's Nano Banana series (GA): Flash2/Nano Banana 2 (recommended, balanced speed+features) and Pro/Nano Banana Pro (production quality, highest text accuracy) — both released 2026-05-28 — plus Lite/Nano Banana 2 Lite (fastest, cheapest, 1K draft, released 2026-06-30). Supports text-to-image generation, image editing with input images, and multi-turn iterative refinement with session persistence.
 
 ### Prerequisites
 
 - **API Key**: `GEMINI_API_KEY` or `GOOGLE_API_KEY` environment variable (get at https://aistudio.google.com/apikey)
-- **Dependencies**: `pip install -U "google-genai>=2.10.0" Pillow` (see `requirements.txt`). SDK **>= 2.10.0 required** — Image Search grounding uses typed `SearchTypes` classes that only exist in `google-genai >= 1.65.0` (2.10.0+ recommended).
+- **Dependencies**: `pip install -U "google-genai>=2.11.0" Pillow` (see `requirements.txt`). SDK **>= 2.11.0 required** — the skill uses the Interactions API (`client.interactions.create`), and 2.11.0 is the first release whose interactions transform reliably accepts multiple input blocks (image + text).
 
 ## Workflow Decision Tree
 
@@ -20,7 +20,7 @@ Determine which workflow to use:
 
 1. **Want to create a new image from text?** → Go to [Text-to-Image Generation](#text-to-image-generation)
 2. **Want to edit or modify an existing image?** → Go to [Image Editing](#image-editing)
-3. **Want to apply a style from reference images?** → Go to [Style Reference](#style-reference) (all models; flash2/pro best fidelity)
+3. **Want to apply a style from reference images?** → Go to [Style Reference](#style-reference) (Pro has official style-reference slots; all models accept references)
 4. **Want to iteratively refine an image over multiple turns?** → Go to [Multi-Turn Editing](#multi-turn-editing) (flash2/pro/lite)
 5. **Need factual/grounded image content?** → Go to [Google Search Grounding](#google-search-grounding) (flash2/pro)
 6. **Need image-based search results?** → Go to [Image Search Grounding](#image-search-grounding) (flash2 only)
@@ -78,28 +78,47 @@ User can select "Other" to type custom styles like watercolor, oil painting, pix
 
 **Optional: Number of Variations** — If the user wants multiple variations (e.g., "3パターン出して"), set `-N` accordingly (max 10). Default is 1 if not mentioned.
 
-### Flash2/Pro Model Follow-Up (Conditional)
+### Model Follow-Up (Conditional)
 
-If the user selects **Lite**, **skip the resolution question** (Lite is 1K only) and skip Google/Image Search (unsupported); only ask the text-rendering option if relevant.
+Branch the follow-up on the selected model so you never offer a resolution or grounding option the model rejects at runtime.
 
-If the user selects **Flash2** or **Pro**, ask a **second AskUserQuestion** with up to 2 questions:
+**If the user selects Lite**: skip the resolution question (Lite is 1K only) and skip Google/Image Search (unsupported); only ask the text-rendering option if relevant.
 
-**Question 1: Resolution (header: "Resolution")**
+**If the user selects Flash2**: ask a **second AskUserQuestion** with up to 2 questions:
+
+*Question 1: Resolution (header: "Resolution")*
 
 | Option | Label | Description |
 |--------|-------|-------------|
 | 1 | 1K (Recommended) | 標準解像度。速度とコストのバランスが良い |
 | 2 | 2K | 高解像度。印刷や大画面表示向け |
 | 3 | 4K | 最高解像度。生成に最大6分かかる場合あり |
-| 4 | 512px | アイコン・サムネイル用の小サイズ（**flash2 のみ**。pro は 1K/2K/4K） |
+| 4 | 512px | アイコン・サムネイル用の小サイズ |
 
-**Question 2: Options (header: "Options", multiSelect: true)**
+*Question 2: Options (header: "Options", multiSelect: true)*
 
 | Option | Label | Description |
 |--------|-------|-------------|
 | 1 | テキスト描画あり | 画像内にテキストを正確に描画する |
-| 2 | Google Search 連携 | 事実に基づく正確な図解・インフォグラフィック（flash2/pro） |
+| 2 | Google Search 連携 | 事実に基づく正確な図解・インフォグラフィック |
 | 3 | Image Search 連携 | 画像検索ベースの正確な写実表現（flash2 のみ） |
+
+**If the user selects Pro**: ask a **second AskUserQuestion** with up to 2 questions. Pro has no 512px tier and no Image Search — do not offer them:
+
+*Question 1: Resolution (header: "Resolution")*
+
+| Option | Label | Description |
+|--------|-------|-------------|
+| 1 | 1K (Recommended) | 標準解像度。速度とコストのバランスが良い |
+| 2 | 2K | 高解像度。印刷や大画面表示向け |
+| 3 | 4K | 最高解像度。生成に最大6分かかる場合あり |
+
+*Question 2: Options (header: "Options", multiSelect: true)*
+
+| Option | Label | Description |
+|--------|-------|-------------|
+| 1 | テキスト描画あり | 画像内にテキストを正確に描画する |
+| 2 | Google Search 連携 | 事実に基づく正確な図解・インフォグラフィック |
 
 User may select none, one, or multiple.
 
@@ -107,7 +126,7 @@ User may select none, one, or multiple.
 
 **Style Reference**: If the user provides reference images for style/composition guidance, collect the reference image paths and add them with `-r`.
 
-**Text-to-Image**: Description → AskUserQuestion (Model, Ratio, Style) → [Pro: follow-up] → Generate
+**Text-to-Image**: Description → AskUserQuestion (Model, Ratio, Style) → [Flash2/Pro: follow-up] → Generate
 
 **Image Editing**: Confirm input image path → Describe changes → AskUserQuestion (Model only; Ratio and Style inherit from original image) → Generate
 
@@ -149,14 +168,14 @@ Choose the right model for your task. All three are GA models (released 2026-05-
 | Multi-Turn Editing | Yes | Yes | Yes |
 | Google Search | Yes | Yes | No |
 | Image Search | Yes (exclusive) | No | No |
-| Max Images/Prompt | 14 | 14 | 14 |
+| Max Images/Prompt | 14 (10 obj + 4 person) | 14 (6 obj + 5 person + 3 style) | 14 (object only) |
 | Aspect Ratios | 10 + 4 ultra (1:4, 4:1, 1:8, 8:1) | 10 standard | 10 standard |
 | Thinking Levels | minimal/high | low/high | minimal/high |
 | Cost | Low | Higher | Lowest |
 
 **Recommendation**: Use **Flash2** (default) for most tasks — best balance of quality, speed, and features. Use **Pro** when maximum text rendering accuracy is critical. Use **Lite** for the fastest, cheapest drafts and high-volume batches (1K only, no search grounding).
 
-### Cost Guide (per image, Standard tier, 2026-06-30, source: https://ai.google.dev/gemini-api/docs/pricing)
+### Cost Guide (per image, Standard tier, 2026-07-12, source: https://ai.google.dev/gemini-api/docs/pricing)
 
 | Model | 512px | 1K | 2K | 4K |
 |-------|-------|-----|-----|-----|
@@ -255,9 +274,9 @@ python3 scripts/generate_image.py \
   -o ./output
 ```
 
-### Multiple Image Editing (Pro)
+### Multiple Image Editing
 
-Edit or blend multiple images in a single prompt:
+Edit or blend multiple images in a single prompt (all models):
 
 ```bash
 python3 scripts/generate_image.py \
@@ -277,11 +296,14 @@ python3 scripts/generate_image.py \
 
 - Max total file size: 7 MB (all images combined)
 - Supported formats: PNG, JPEG, WebP, HEIC, HEIF
-- All models (flash2 / pro / lite): up to 14 images total (input + reference combined)
+- **Total input + reference images: up to 14 for all models**, but the official per-role limits differ:
+  - **Lite**: up to 14 object references (no person-consistency or style-reference slots)
+  - **Flash2**: up to 10 object references + 4 person-consistency references (no official style-reference slot)
+  - **Pro**: up to 6 object references + 5 person-consistency references + 3 style references
 
 ## Style Reference
 
-Apply the visual style, color palette, or composition from reference images to new or existing images. All models accept up to 14 reference/input images; **Flash2** (default) and **Pro** give the best reference fidelity.
+Apply the visual style, color palette, or composition from reference images to new or existing images. **Pro is the first choice for style transfer** — it is the only model with official style-reference slots (up to 3). All models accept up to 14 reference/input images total, so Flash2 and Lite can still take a reference image as an object reference and pick up its look, but without Pro's dedicated style-reference handling.
 
 ### Generate with Style Reference
 
@@ -319,14 +341,14 @@ python3 scripts/generate_image.py \
 
 - Explicitly describe which aspects to reference: "color palette", "lighting style", "composition", "brush strokes"
 - Combine reference images with detailed text prompts for best results
-- All models accept up to 14 input+reference images; Flash2/Pro give the best reference fidelity
+- All models accept up to 14 input+reference images total; for dedicated style transfer prefer **Pro** (official style-reference slots), while Flash2/Lite treat a reference as an object reference
 - See `references/prompt-engineering.md` for detailed style reference techniques
 
 ## Multi-Turn Editing
 
 Iteratively refine images through conversational editing. Available with **Flash2** (default), **Pro**, and **Lite** models.
 
-The script manages thought signatures automatically through session files, enabling the model to understand and modify its previous output.
+Multi-turn state is handled server-side through the Interactions API: each turn stores its `interaction.id`, and the next turn passes it as `previous_interaction_id` so the model can reference and modify its previous output. Continuation relies on the server default (`store` is true by default), so stored turns persist for the retention window (55 days Paid Tier / 1 day Free Tier). The script records these IDs in a version 2 session file.
 
 ### Start a New Chat Session
 
@@ -348,12 +370,16 @@ python3 scripts/generate_image.py \
   -o ./output
 ```
 
+You can pass `-i`/`-r` on a continuation turn as well; the images are sent as part of that turn.
+
 ### How It Works
 
-1. Each turn's prompt, images, and thought signatures are saved to the session JSON
-2. On continuation, the full conversation history is rebuilt and sent to the API
-3. Thought signatures allow the model to understand its previous image composition
-4. You can continue editing for multiple turns with the same session file
+1. Each turn saves its prompt, saved image paths, model text, and the returned `interaction.id` to the session JSON (version 2).
+2. On continuation the script sends only the new prompt plus `previous_interaction_id` (the last turn's id); `store` is left at the server default (true), so the server retains the prior context and no local history rebuild is needed. (Single-shot generations instead send `store=False`.)
+3. The session pins the model chosen on turn 1; continuation reuses it even if `-m` differs. Aspect ratio and image size are likewise locked to the turn-1 settings (`-a`/`-s` on a continuation turn are ignored); `-t`/`-g`/`--image-search` apply per turn.
+4. You can continue editing for multiple turns with the same session file.
+
+**Note**: Sessions created by an older build (`generate_content` era, with a `history` key and no `version` field) cannot be continued. Start a fresh session with `-c`. Continuation also works only within the server retention window (55 days Paid Tier / 1 day Free Tier); an expired session must be restarted with `-c`.
 
 ## Google Search Grounding
 
@@ -406,10 +432,10 @@ Best for: product photos, real-world object references, current visual trends.
 | `--image-size` | `-s` | None | Resolution (flash2: 512px/1K/2K/4K, pro: 1K/2K/4K, lite: 1K only) |
 | `--thinking-level` | `-t` | None | Thinking level (flash2/lite: minimal/high, pro: low/high) |
 | `--google-search` | `-g` | False | Enable Google Search (flash2/pro) |
-| `--image-search` | | False | Enable Image Search (flash2 only; requires SDK >= 2.10.0) |
+| `--image-search` | | False | Enable Image Search grounding (flash2 only; sent as a `google_search` tool `search_types`) |
 | `--chat` | `-c` | False | Start new multi-turn session (flash2/pro/lite) |
-| `--session` | | None | Continue existing session |
-| `--timeout` | | 120 | Timeout in seconds (auto 420s for 4K; actually propagated to the API) |
+| `--session` | | None | Continue existing session (version 2 file; older `generate_content`-era sessions cannot be continued) |
+| `--timeout` | | 120 | Timeout in seconds for the API request (auto-raised to 420s for 4K) |
 
 ## Constraints
 
@@ -469,12 +495,12 @@ Best for: product photos, real-world object references, current visual trends.
 | Issue | Solution |
 |-------|----------|
 | No API key | Set `GEMINI_API_KEY` env var |
-| Model not found (404) | Model ID may have changed; run `--list-models` to check |
-| No images in response | Prompt may be filtered; simplify content |
-| Rate limit (429) | Script auto-retries with backoff (max 3) |
+| Model not found | Model ID may have changed; run `--list-models` to check |
+| No images in response | Prompt may be filtered; simplify content (script exits 2) |
+| Rate limit / 5xx | Script classifies by `status_code` and auto-retries with backoff (max 3) |
 | 4K timeout | Auto-adjusted to 420s when `--image-size 4K` |
-| SDK too old (no `SearchTypes`) — Image Search fails | Run `pip install -U 'google-genai>=2.10.0'` |
-| Import error | Run `pip install -U "google-genai>=2.10.0" Pillow` |
+| Old-format session cannot be continued | The session predates the Interactions API; start a new one with `-c` |
+| Import error | Run `pip install -U "google-genai>=2.11.0" Pillow` |
 
 For detailed error codes and API specifications, see `references/api-reference.md`.
 
@@ -483,5 +509,5 @@ For detailed error codes and API specifications, see `references/api-reference.m
 ```bash
 pip install -r requirements.txt
 # or directly:
-pip install -U "google-genai>=2.10.0" Pillow
+pip install -U "google-genai>=2.11.0" Pillow
 ```

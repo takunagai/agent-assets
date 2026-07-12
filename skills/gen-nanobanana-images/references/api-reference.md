@@ -7,17 +7,17 @@ GA models (Flash2 / Pro released 2026-05-28, Lite released 2026-06-30):
 | Feature | Flash2 / NB2 (推奨) | Pro (最高品質) | Lite (最速最安) |
 |---------|---------------------|---------------|----------------|
 | Model ID | `gemini-3.1-flash-image` | `gemini-3-pro-image` | `gemini-3.1-flash-lite-image` |
-| Max Input Tokens | 32,768 | 65,536 | 32,768 |
-| Max Output Tokens | 8,192 | 32,768 | 8,192 |
-| Max Images/Prompt | 14 | 14 | 14 |
+| Max Input Tokens | 32,768 | 65,536 | 65,536 |
+| Max Output Tokens | 8,192 | 32,768 | 4,096 |
+| Max Images/Prompt | 14 (10 obj + 4 person) | 14 (6 obj + 5 person + 3 style) | 14 (object only) |
 | Image Sizes | 512px, 1K, 2K, 4K | 1K, 2K, 4K | 1K only |
 | Text Rendering | Good | High accuracy | Basic |
 | Google Search | Yes | Yes | No |
 | Image Search | Yes (exclusive) | No | No |
 | Thinking Levels | minimal, high | low, high | minimal, high |
-| Multi-Turn Editing | Yes | Yes (thought_signature required) | Yes |
+| Multi-Turn Editing | Yes | Yes | Yes |
 | Aspect Ratios | 10 + 4 ultra | 10 standard | 10 standard |
-| Speed | Fast (~5-15s) | Slower (~15-60s, 4K: ~180-360s) | Fastest |
+| Speed | Fast (~5-15s) | Slower (~15-60s, 4K: ~180-360s) | Fastest (sub-2s) |
 | Cost | Low | Higher | Lowest |
 
 ### 旧モデル（廃止）
@@ -25,7 +25,7 @@ GA models (Flash2 / Pro released 2026-05-28, Lite released 2026-06-30):
 - `gemini-2.5-flash-image`（旧 Flash）: 公式で「レガシー。移行を強く推奨」。本スキルからは削除済み。ドラフト用途は Lite を使う。
 - `gemini-3.1-flash-image-preview` / `gemini-3-pro-image-preview`（preview ID）: 2026-05-28 に deprecated 告知、**2026-06-25 shutdown**。GA ID（`gemini-3.1-flash-image` / `gemini-3-pro-image`）へ移行済み。`--list-models` には preview ID がまだ列挙されることがあるが常用してはならない。
 
-## Pricing（画像 1 枚あたり, Standard tier, 2026-06-30, 出典 https://ai.google.dev/gemini-api/docs/pricing）
+## Pricing（画像 1 枚あたり, Standard tier, 2026-07-12, 出典 https://ai.google.dev/gemini-api/docs/pricing）
 
 | Model | 512px | 1K | 2K | 4K |
 |-------|-------|-----|-----|-----|
@@ -41,108 +41,117 @@ GA models (Flash2 / Pro released 2026-05-28, Lite released 2026-06-30):
 
 **Extended (flash2 only)**: `1:4`, `4:1`, `1:8`, `8:1`
 
-## API Classes
+## Interactions API
 
-### GenerateContentConfig
+The skill calls the **Interactions API** (`client.interactions.create`). Google's official image-generation samples have fully moved to it; the older `generate_content` path still exists as the Core API (not deprecated) but is treated here as legacy.
+
+### Request
 
 ```python
-from google.genai import types
+from google import genai
+import base64
 
-config = types.GenerateContentConfig(
-    responseModalities=["IMAGE", "TEXT"],  # IMAGE, TEXT, or both
-    imageConfig=types.ImageConfig(
-        aspectRatio="16:9",   # Required
-        imageSize="2K",       # flash2: 512px/1K/2K/4K, pro: 1K/2K/4K
-    ),
-    thinkingConfig=types.ThinkingConfig(
-        thinkingLevel="HIGH",  # Enum: MINIMAL, LOW, MEDIUM, HIGH
-    ),
-    tools=[types.Tool(googleSearch=types.GoogleSearch())],  # flash2/pro
-)
+client = genai.Client(api_key=api_key)
 
-# Image Search (flash2 only) — with optional Web Search
-config_with_image_search = types.GenerateContentConfig(
-    responseModalities=["IMAGE", "TEXT"],
-    imageConfig=types.ImageConfig(aspectRatio="1:1"),
-    tools=[types.Tool(googleSearch=types.GoogleSearch(
-        searchTypes=types.SearchTypes(
-            imageSearch=types.ImageSearch(),
-            webSearch=types.WebSearch(),  # optional: combine with web search
-        )
-    ))],
+interaction = client.interactions.create(
+    model="gemini-3.1-flash-image",
+    input=input_blocks,                 # str, or list[dict] (see below)
+    response_format={"type": "image", "aspect_ratio": "16:9", "image_size": "2K"},
+    # optional, only when needed:
+    tools=[{"type": "google_search", "search_types": ["web_search"]}],
+    generation_config={"thinking_level": "high"},   # lowercase: minimal | low | high
+    previous_interaction_id=prev_id,    # multi-turn continuation
+    store=store,                        # single-shot: False; multi-turn: omit (server default true)
 )
 ```
 
-> **SDK requirement for Image Search**: the typed `types.SearchTypes` / `types.ImageSearch` / `types.WebSearch` classes were introduced in **`google-genai` v1.65.0** (2026-02-26); **v2.10.0+ recommended**. On older SDKs these classes are absent and there is no working raw-dict fallback (the API rejects it via `extra_forbidden`). The script checks `hasattr(types, "SearchTypes")` at startup and exits with an upgrade message if missing. Image Search grounding is **flash2 only**.
+All arguments are flat keyword arguments — there is **no** `config=GenerateContentConfig(...)` wrapper. `response_modalities`, and `mime_type`/`delivery` on `response_format`, are not passed (the server default is used; the 2.10–2.11 `mime_type` Literal only accepts `image/jpeg`, so it is omitted and PNG is produced locally).
 
-### Part Types for Image Input
+### Input blocks
 
-```python
-# ローカルファイルから
-part = types.Part.from_bytes(data=image_bytes, mime_type="image/png")
-
-# Cloud Storage URI から
-part = types.Part.from_uri(file_uri="gs://bucket/image.png", mime_type="image/png")
-
-# Base64 インライン
-part = types.Part(inline_data=types.Blob(mime_type="image/png", data=b64_string))
-```
-
-Supported MIME types: `image/png`, `image/jpeg`, `image/webp`, `image/heic`, `image/heif`
-
-### Response Structure
+`input` is either a plain string (text-only) or a list of typed blocks. Images **must** be explicit base64 strings — raw `bytes` are not auto-converted (only PathLike/IO are):
 
 ```python
-response = client.models.generate_content(model=model_id, contents=contents, config=config)
-
-for part in response.candidates[0].content.parts:
-    if part.thought:           # 思考テキスト (デバッグ用)
-        pass
-    if part.thought_signature: # Multi-turn用署名
-        pass
-    if part.text:              # テキスト応答
-        print(part.text)
-    if part.inline_data:       # 画像データ
-        image = part.as_image()  # -> PIL.Image
-        image.save("output.png")
+input_blocks = [
+    {"type": "image", "data": base64.b64encode(img_bytes).decode("ascii"), "mime_type": "image/png"},
+    # ... more -i / -r images ...
+    {"type": "text", "text": full_prompt},   # text goes last
+]
 ```
 
-## Thought Signature Protocol
+Supported image MIME types: `image/png`, `image/jpeg`, `image/webp`, `image/heic`, `image/heif`.
 
-Thought signatures are mandatory for Gemini 3 Pro Image multi-turn editing.
+### response_format
 
-### Rules
-1. Signatures appear on the **first part after thoughts** (text or image) and **every subsequent image part**
-2. **All signatures** from the previous model response must be included in the next request
-3. Missing or invalid signatures cause **400 errors**
-4. The model uses signatures to understand the original image's composition and logic
-
-### Session persistence (base64)
-
-`thought_signature` values are raw **bytes** and cannot be `json.dump`-ed directly. The script stores each signature in the session JSON as a base64 string under the key **`thought_signature_b64`** (`base64.b64encode(sig).decode("ascii")`), and decodes it back to bytes with `base64.b64decode` when rebuilding history for the next turn. (Earlier builds tried to serialize the raw bytes and crashed with `TypeError: Object of type bytes is not JSON serializable`, so no legacy `thought_signature` key exists in valid session files.)
-
-### Signature Positions in Response
-
-```
-Part 0: thought (text)           -> No signature
-Part 1: text or image            -> HAS thought_signature (first after thoughts)
-Part 2: image                    -> HAS thought_signature
-Part 3: image                    -> HAS thought_signature
+```python
+response_format = {"type": "image", "aspect_ratio": aspect_ratio}
+if image_size:
+    response_format["image_size"] = SIZE_MAP[image_size]   # "512px" -> "512", others unchanged
 ```
 
-### Bypass (Migration Only)
+### tools (search grounding)
 
-For migration scenarios lacking valid signatures, use the bypass string:
+```python
+# -g only:             search_types = ["web_search"]
+# --image-search only: search_types = ["image_search"]
+# both:                search_types = ["web_search", "image_search"]
+tools = [{"type": "google_search", "search_types": search_types}]
 ```
-"context_engineering_is_the_way_to_go"
+
+Validation is unchanged: Lite supports no grounding, `image_search` is flash2 only. The old typed `types.Tool(googleSearch=...)` / `types.SearchTypes` classes are no longer used.
+
+### thinking
+
+Pass `generation_config={"thinking_level": level}` with a **lowercase** value. Allowed values are model-specific: flash2 `minimal`/`high`, pro `low`/`high`, lite `minimal`/`high`. (There is no `MEDIUM` for these image models.)
+
+### Response parsing
+
+```python
+interaction.id            # continuation key for multi-turn — always capture it
+
+for step in interaction.steps:
+    if step.type == "model_output":
+        for block in step.content:
+            if block.type == "image":
+                data = block.data          # base64 string
+                mime = block.mime_type
+            elif block.type == "text":
+                text = block.text
+
+# convenience fallbacks if the steps walk yields no image:
+interaction.output_image   # first image block
+interaction.output_text    # concatenated text
 ```
-This disables strict validation. Only use for migration, not production workflows.
+
+Saving: `base64.b64decode(data)` → open with PIL → save as PNG (falls back to writing raw bytes with a mime-derived extension if PIL cannot open it). If no image block is present, the prompt was likely filtered — the script warns and exits 2.
+
+**Note**: The `interaction.outputs[-1]` pattern seen in some older external write-ups is a retired schema (removed 2026-06-08). Use the `steps` walk plus the `output_image`/`output_text` convenience properties shown above.
+
+### Multi-turn and store
+
+- Capture `interaction.id` each turn; the next turn sets `previous_interaction_id` to the previous id.
+- **store**: single-shot generations send `store=False` (no retention needed). Multi-turn (`-c`/`--session`) **omits** `store` and relies on the server default — `store` is **true** by default — which retains the interaction so the `previous_interaction_id` chain works. No local history rebuild is needed; `-i`/`-r` may be sent on continuation turns.
+- **Retention**: stored interactions are kept for **55 days (Paid Tier)** or **1 day (Free Tier)**; Paid can change this to 7/14/28/55 days in AI Studio. Session continuation is valid only within that window — an expired session fails to continue, so restart it with `-c`.
+
+### Error hierarchy
+
+Interactions API exceptions live on a **separate hierarchy** from `google.genai.errors.APIError` (an internal compat-errors path). Do **not** import from that private path. Classify by duck-typing on `status_code`:
+
+- `status_code == 429` or `>= 500` → retry with exponential backoff (max 3).
+- `status_code is None` (network / timeout) → retry.
+- other 4xx → raise immediately.
+
+Substring matching on the message (`"400" in str(e)`) is not used anywhere.
+
+## Legacy (generate_content era)
+
+Earlier builds used `client.models.generate_content` with `types.GenerateContentConfig(imageConfig=..., thinkingConfig=..., tools=[types.Tool(googleSearch=...)])`, parsed `response.candidates[0].content.parts`, and threaded **thought signatures** (base64-stored raw bytes, key `thought_signature_b64`) through session files for Pro multi-turn. The Interactions API removes all of that: server-side `previous_interaction_id` replaces thought signatures, so sessions created that way (a `history` key, no `version`) cannot be continued. `generate_content` remains available as the Core API but is not used by this skill.
 
 ## Error Codes
 
 | HTTP Code | Cause | Resolution |
 |-----------|-------|------------|
-| 400 | Invalid request (bad params, missing thought_signature) | Check parameters and session integrity |
+| 400 | Invalid request (bad params) | Check parameters |
 | 403 | Invalid API key or quota exceeded | Verify API key at aistudio.google.com |
 | 404 | Model not found | Check model ID spelling |
 | 429 | Rate limit exceeded | Wait and retry with exponential backoff |
