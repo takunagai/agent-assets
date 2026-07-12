@@ -50,6 +50,7 @@ npx wrangler tail | jq .
 
 - 同時接続クライアントは最大 10（それ以上は拒否される）
 - 高トラフィック時はサンプリングされる場合がある
+- 接続済みなら `cloudflare-observability` MCP でも本番ログ・分析を確認できる（未接続時は上記の `wrangler tail` を使う）。同時接続 10 の制約を受けない選択肢として有効
 
 ## 5. Preview URL が発行されない場合
 

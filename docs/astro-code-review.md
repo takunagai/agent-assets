@@ -116,6 +116,8 @@ skills/astro-code-review/
 
 ## 外部リファレンス
 
+最新仕様の確認は、接続済みなら `cloudflare-docs` MCP 検索（認証不要）を第一手段とする。
+
 - [Astro 7 リリース記事](https://astro.build/blog/astro-7/)
 - [Astro v7 Upgrade Guide](https://docs.astro.build/en/guides/upgrade-to/v7/)
 - [Astro v6 Upgrade Guide（5→6 レガシー検出の出典）](https://docs.astro.build/en/guides/upgrade-to/v6/)

@@ -18,6 +18,7 @@ cat package.json | grep -E '"astro"|"@astrojs/cloudflare"'
   - Astro 6 → 7: https://docs.astro.build/en/guides/upgrade-to/v7/
   - Astro 5 → 6（v5 系は先に経由）: https://docs.astro.build/en/guides/upgrade-to/v6/
 - 旧バージョン向けのデプロイ手順は提供しない（既存プロジェクトも v7 へ更新する方針）。
+- 移行ガイドの詳細確認は、接続済みなら `cloudflare-docs` MCP（認証不要）を第一手段とする。未接続時は上記 URL を直接参照する。
 
 ## 2. パッケージマネージャ検出
 

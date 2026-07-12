@@ -160,6 +160,17 @@ npx wrangler versions upload --preview-alias staging
 
 ---
 
+## MCP 連携（接続済みなら優先。CLI が実行骨格）
+
+公式プラグイン `cloudflare` の MCP サーバーが接続済み（OAuth 認証済み）なら、次を CLI コマンドの代わりに使ってよい。未接続・未認証の場合は従来どおり CLI で続行する。
+
+- **デプロイ状態確認** ─ `cloudflare-builds`（Workers Builds のビルド・デプロイ状態）。未接続時は `wrangler deployments list`。
+- **本番ログ確認** ─ `cloudflare-observability`（本番 Workers ログ・分析）。未接続時は `wrangler tail`。
+- **ドキュメント疑問点の確認** ─ `cloudflare-docs`（認証不要・常時使用可）。ドキュメント参照の第一手段としてよい。
+- 汎用的な wrangler の作法・ベストプラクティスは、公式プラグイン同梱スキル `wrangler` / `workers-best-practices` を参照する。
+
+---
+
 ## 環境変数・secrets の要点
 
 詳細は `references/secrets-and-env.md` に委譲する。要点のみ。

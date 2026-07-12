@@ -79,6 +79,8 @@ wrangler r2 bucket create <WORKER_NAME>-opennext-cache
 
 `wrangler.jsonc` の `r2_buckets[].bucket_name` と一致させる。
 
+接続済みなら `cloudflare-bindings` MCP でも作成・確認可。
+
 ## 5. ローカル開発設定
 
 - `next.config.ts` に以下を追記し、`next dev` でも Cloudflare バインディングにアクセスできるようにする

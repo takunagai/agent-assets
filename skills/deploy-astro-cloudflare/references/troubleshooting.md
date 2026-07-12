@@ -10,6 +10,7 @@
 | 認証エラー | `wrangler login` で再認証。CI は `CLOUDFLARE_API_TOKEN` を設定 |
 | デプロイ後に環境変数が消えた | `wrangler.jsonc` に `"keep_vars": true` があるか確認（`secrets-and-env.md` 参照） |
 | Workers Builds が失敗 | ダッシュボードの Worker → Deployments → View build history でビルドログを確認 |
+| 本番でエラーが再現するがログを追いたい | 接続済みなら `cloudflare-observability` MCP で本番ログ・分析を確認。未接続時は `wrangler tail` |
 | `git push` が失敗 | リモートとの差分を確認。`git pull --rebase` を検討 |
 | 二重デプロイ | Workers Builds 設定済みで `--local` デプロイ後に push すると自動デプロイと重複。Workers Builds 運用中はモード A（push のみ）を使う |
 | Node バージョン不一致 | Astro 7 は Node v22.12.0 以上が必須（奇数メジャー v23 等は非対応）。nvm / Volta で切り替え |

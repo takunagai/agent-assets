@@ -335,6 +335,8 @@ try {
 
 ## 参考資料
 
+最新仕様の確認は cloudflare-docs MCP 検索を第一手段とする（以下 URL は起点）。
+
 - [Astro Cloudflare Adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/)
 - [Astro Route Caching](https://docs.astro.build/en/guides/caching/)
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
