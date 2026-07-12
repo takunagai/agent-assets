@@ -14,10 +14,11 @@ import json
 import os
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
+from typing import Optional
 
 
 # ---------------------------------------------------------------------------
@@ -77,14 +78,26 @@ MODEL_SPECS: dict = {
     ),
 }
 
-# ヘルプ表示・argparse 用の集約値
-ALL_ASPECT_RATIOS = ASPECT_RATIOS_BASE + ASPECT_RATIOS_EXTENDED
-ALL_IMAGE_SIZES = ("512px", "1K", "2K", "4K")
-MODEL_CHOICES = list(MODEL_SPECS.keys())
 
-# -s の受理値を Interactions API の公式 image_size 値へマップする。
-# 512px のみ公式値が "512"。他は受理値そのまま。
-SIZE_MAP = {"512px": "512", "1K": "1K", "2K": "2K", "4K": "4K"}
+def _model_union(attr):
+    """全モデルの対応値を宣言順で重複除去して集約する（argparse の choices / help 用）。"""
+    return tuple(
+        dict.fromkeys(v for spec in MODEL_SPECS.values() for v in getattr(spec, attr))
+    )
+
+
+def _models_supporting(attr):
+    """指定の能力を持つモデルのエイリアスをカンマ区切りで返す（エラーメッセージ用）。"""
+    return ", ".join(a for a, spec in MODEL_SPECS.items() if getattr(spec, attr))
+
+
+ALL_ASPECT_RATIOS = _model_union("aspect_ratios")
+ALL_IMAGE_SIZES = _model_union("image_sizes")
+MODEL_CHOICES = list(MODEL_SPECS)
+
+# -s の受理値のうち、Interactions API の公式 image_size 値と異なるものだけを持つ。
+# それ以外は受理値をそのまま送る（build_response_format のフォールバック）。
+API_IMAGE_SIZE_OVERRIDES = {"512px": "512"}
 
 # Negative Constraints は既定 OFF（空文字）。付加したい場合は config.json の
 # "negative_constraints" キーに文字列を設定する（opt-in）。以下は設定例:
@@ -98,8 +111,9 @@ RETRY_BASE_DELAY = 2
 DEFAULT_NUM_IMAGES = 1
 MAX_NUM_IMAGES = 10  # Google Cloud ドキュメントの記載上限に合わせる
 
-SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".heic", ".heif"}
+TIMEOUT_4K = 420  # 4K は生成に時間がかかるため、これを下回るタイムアウトは引き上げる
 
+# 入力画像の拡張子 → mime の正本。対応拡張子・raw 保存時の拡張子はここから導出する。
 MIME_MAP = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -109,17 +123,11 @@ MIME_MAP = {
     ".heif": "image/heif",
 }
 
-# 返却 mime が jpeg 等で PIL 保存に失敗したとき、raw bytes を書き出す際の拡張子。
-EXT_FROM_MIME = {
-    "image/png": ".png",
-    "image/jpeg": ".jpg",
-    "image/webp": ".webp",
-    "image/heic": ".heic",
-    "image/heif": ".heif",
-    "image/gif": ".gif",
-    "image/bmp": ".bmp",
-    "image/tiff": ".tiff",
-}
+SUPPORTED_IMAGE_EXTENSIONS = set(MIME_MAP)
+
+# 返却 mime が png 以外で PIL 保存に失敗したとき、raw bytes を書き出す際の拡張子。
+# MIME_MAP の逆引き（reversed で先に定義した拡張子が勝つ = image/jpeg は .jpg）。
+EXT_FROM_MIME = {mime: ext for ext, mime in reversed(MIME_MAP.items())}
 
 # ユーザーが config.json で変更可能なデフォルト値
 # negative_constraints は既定 OFF（空文字）。config.json で opt-in する。
@@ -132,6 +140,66 @@ CONFIGURABLE_DEFAULTS = {
     "thinking_level": None,
     "negative_constraints": "",
 }
+
+
+@dataclass(frozen=True)
+class EffectiveParams:
+    """CLI / config / セッションを解決した実効パラメータ。
+
+    セッション継続では model / aspect_ratio / image_size をセッション側が握る
+    （ターン 1 の設定を引き継ぐ仕様）。この dataclass に解決結果を畳むことで、
+    バリデーションも生成もセッションの有無を意識せず実効値だけを見ればよくなる。
+    """
+
+    model_alias: str
+    model_id: str
+    spec: ModelSpec
+    aspect_ratio: str
+    image_size: Optional[str]
+    timeout: int
+    turn_num: int                    # 0 = 単発生成（ファイル名に _t を付けない）
+    previous_interaction_id: Optional[str]
+    session_path: Optional[str]
+    session_data: Optional[dict]
+
+
+def _fail(*lines):
+    """エラーを stderr に出して exit 1 する。"""
+    for line in lines:
+        print(line, file=sys.stderr)
+    sys.exit(1)
+
+
+def _note(msg):
+    """Note を stderr に出す。stdout は Saved: 等の成果物パス専用に空けておく。"""
+    print(msg, file=sys.stderr)
+
+
+def _status_code(e):
+    """例外の HTTP status を取り出す。
+
+    Interactions API の例外は google.genai.errors.APIError と別階層のため、
+    継承ではなく status_code のダックタイピングで分類する。
+    """
+    return getattr(e, "status_code", None)
+
+
+def _require_api_key():
+    """API キーを解決する。未設定なら exit 1。"""
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        _fail(
+            "Error: GEMINI_API_KEY or GOOGLE_API_KEY environment variable is required.",
+            "  Get your key at: https://aistudio.google.com/apikey",
+        )
+    return api_key
+
+
+def _client(api_key):
+    """google-genai クライアントを生成する（import は遅延させる）。"""
+    from google import genai
+
+    return genai.Client(api_key=api_key)
 
 
 def load_config():
@@ -308,261 +376,203 @@ def parse_args(config=None):
 
 
 def _validate_image_file(path_str):
-    """単一画像ファイルのバリデーション。エラー時はメッセージ文字列を返す。正常は None。"""
+    """単一画像ファイルを検査する。
+
+    Returns:
+        tuple: (error_message | None, size_mb) — stat は 1 回で済ませ、
+        合計サイズは呼び出し側がこの戻り値を積み上げる。
+    """
     p = Path(path_str)
     if not p.exists():
-        return f"画像ファイルが見つかりません: {path_str}"
+        return f"画像ファイルが見つかりません: {path_str}", 0.0
     ext = p.suffix.lower()
     if ext not in SUPPORTED_IMAGE_EXTENSIONS:
         supported = ", ".join(sorted(SUPPORTED_IMAGE_EXTENSIONS))
-        return f"サポートされていない画像形式です: {path_str} (対応: {supported})"
+        return f"サポートされていない画像形式です: {path_str} (対応: {supported})", 0.0
     size_mb = p.stat().st_size / (1024 * 1024)
     if size_mb > MAX_FILE_SIZE_MB:
-        return f"画像ファイルが大きすぎます: {path_str} ({size_mb:.1f}MB, 上限: {MAX_FILE_SIZE_MB}MB)"
-    return None
+        return (
+            f"画像ファイルが大きすぎます: {path_str} ({size_mb:.1f}MB, 上限: {MAX_FILE_SIZE_MB}MB)",
+            size_mb,
+        )
+    return None, size_mb
 
 
-def _unique_output_path(out_path):
-    """出力先に同名ファイルがあれば連番を振って回避する。
+def validate_args(args, params):
+    """実効パラメータを検査する。エラー時は exit 1。
 
-    Returns:
-        tuple: (Path, renamed: bool) — renamed が True なら連番回避したことを示す。
+    セッション継続時の aspect_ratio / image_size はターン 1 で検証済みの値が
+    params に入っているため、単発と同じ検査をそのまま通せばよい。
     """
-    p = Path(out_path)
-    if not p.exists():
-        return p, False
-    stem, suffix, parent = p.stem, p.suffix, p.parent
-    i = 2
-    while True:
-        candidate = parent / f"{stem}_{i}{suffix}"
-        if not candidate.exists():
-            return candidate, True
-        i += 1
+    spec = params.spec
+    model = params.model_alias
 
-
-def _augment_prompt(prompt, has_input, has_reference, input_count=0, ref_count=0):
-    """入力/リファレンス画像の存在に応じてプロンプトに注釈を付加する。"""
-    if has_input and has_reference:
-        prefix = (
-            f"Edit the {input_count} input image(s). "
-            f"Use the {ref_count} reference image(s) for style and composition guidance. "
+    if params.aspect_ratio not in spec.aspect_ratios:
+        _fail(
+            f"Error: Invalid aspect ratio '{params.aspect_ratio}' for {model}. "
+            f"Valid: {', '.join(spec.aspect_ratios)}"
         )
-        return prefix + prompt
-    if has_reference and not has_input:
-        prefix = (
-            f"Use the {ref_count} reference image(s) for style and composition guidance. "
-        )
-        return prefix + prompt
-    # -i のみ or 画像なし: 注釈なし（既存動作を維持）
-    return prompt
 
-
-def _peek_session_model_alias(session_path):
-    """セッションファイルからモデルエイリアスだけを先読みする。
-
-    バリデーション用の best-effort。存在しない・壊れている等の異常は None を返し、
-    正式なエラー報告は validate_args の存在確認と load_session に委ねる。
-    """
-    try:
-        with open(session_path, "r") as f:
-            data = json.load(f)
-        alias = data.get("model_alias")
-        return alias if alias in MODEL_SPECS else None
-    except (OSError, json.JSONDecodeError, AttributeError):
-        return None
-
-
-def validate_args(args):
-    """引数のバリデーション。エラー時は sys.exit(1)。"""
-    # API キー確認
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        print(
-            "Error: GEMINI_API_KEY or GOOGLE_API_KEY environment variable is required.",
-            file=sys.stderr,
-        )
-        print(
-            "  Get your key at: https://aistudio.google.com/apikey", file=sys.stderr
-        )
-        sys.exit(1)
-
-    # セッション継続時は、実際に使われるモデル（セッション側）の spec で検査する。
-    # -m/-a/-s は generate_chat が無視するため、ここでも検査対象から外す
-    # （CLI/config のモデルで検査すると、無視されるはずの指定で誤って落ちる）。
-    session_alias = _peek_session_model_alias(args.session) if args.session else None
-    effective_model = session_alias or args.model
-    spec = MODEL_SPECS[effective_model]
-
-    if not args.session:
-        # アスペクト比
-        if args.aspect_ratio not in spec.aspect_ratios:
-            print(
-                f"Error: Invalid aspect ratio '{args.aspect_ratio}' for {effective_model}. "
-                f"Valid: {', '.join(spec.aspect_ratios)}",
-                file=sys.stderr,
+    if params.image_size:
+        if not spec.image_sizes:
+            _fail(f"Error: --image-size is not available for the {model} model.")
+        if params.image_size not in spec.image_sizes:
+            _fail(
+                f"Error: Invalid image size '{params.image_size}' for {model}. "
+                f"Valid: {', '.join(spec.image_sizes)}"
             )
-            sys.exit(1)
 
-        # 画像サイズ
-        if args.image_size:
-            if not spec.image_sizes:
-                print(
-                    f"Error: --image-size is not available for the {effective_model} model.",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
-            if args.image_size not in spec.image_sizes:
-                print(
-                    f"Error: Invalid image size '{args.image_size}' for {effective_model}. "
-                    f"Valid: {', '.join(spec.image_sizes)}",
-                    file=sys.stderr,
-                )
-                sys.exit(1)
-    elif args.aspect_ratio_explicit or args.image_size:
-        print(
-            "Note: セッション継続では -a / -s は無視されます"
-            "（ターン 1 の設定を引き継ぎます）。",
-            file=sys.stderr,
-        )
-
-    # Google Search（継続時も毎ターン効くため effective_model で検査する）
+    # 検索グラウンディングは継続時も毎ターン効くため、実効モデルで検査する
     if args.google_search and not spec.supports_google_search:
-        print(
-            f"Error: --google-search is not available for the {effective_model} model.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        _fail(f"Error: --google-search is not available for the {model} model.")
 
-    # Image Search
     if args.image_search and not spec.supports_image_search:
-        print(
-            f"Error: --image-search is not available for the {effective_model} model. "
-            f"Image Search is only supported by flash2.",
-            file=sys.stderr,
+        _fail(
+            f"Error: --image-search is not available for the {model} model. "
+            f"Image Search is only supported by {_models_supporting('supports_image_search')}."
         )
-        sys.exit(1)
 
-    # 思考レベルのバリデーション
-    if args.thinking_level:
-        if args.thinking_level not in spec.thinking_levels:
-            print(
-                f"Error: Invalid thinking level '{args.thinking_level}' for {effective_model}. "
-                f"Valid: {', '.join(spec.thinking_levels)}",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+    if args.thinking_level and args.thinking_level not in spec.thinking_levels:
+        _fail(
+            f"Error: Invalid thinking level '{args.thinking_level}' for {model}. "
+            f"Valid: {', '.join(spec.thinking_levels)}"
+        )
 
-    # 生成枚数のバリデーション
     if args.num_images < 1:
-        print("Error: --num-images は1以上を指定してください。", file=sys.stderr)
-        sys.exit(1)
+        _fail("Error: --num-images は1以上を指定してください。")
     if args.num_images > MAX_NUM_IMAGES:
-        print(
-            f"Error: --num-images の上限は {MAX_NUM_IMAGES} 枚です（指定: {args.num_images}枚）。",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        _fail(f"Error: --num-images の上限は {MAX_NUM_IMAGES} 枚です（指定: {args.num_images}枚）。")
 
     # マルチターンでは -N 無効（1回のターンで1枚が原則）。
     # CLI で明示された -N 2 以上はエラー、config.json 由来の値は 1 に丸めて続行する。
     if (args.chat or args.session) and args.num_images > 1:
         if args.num_images_explicit:
-            print(
-                "Error: マルチターンモード (--chat/--session) では --num-images は1のみ指定可能です。",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+            _fail("Error: マルチターンモード (--chat/--session) では --num-images は1のみ指定可能です。")
         args.num_images = 1
-        print("Note: config.json の num_images はマルチターンモードでは無視され、1 に丸められます。")
+        _note("Note: config.json の num_images はマルチターンモードでは無視され、1 に丸められます。")
 
-    # 入力画像・リファレンス画像のバリデーション
-    all_images = []
-    if args.input_image:
-        for img in args.input_image:
-            err = _validate_image_file(img)
-            if err:
-                print(f"Error: {err}", file=sys.stderr)
-                sys.exit(1)
-            all_images.append(img)
-    if args.reference:
-        for img in args.reference:
-            err = _validate_image_file(img)
-            if err:
-                print(f"Error: {err}", file=sys.stderr)
-                sys.exit(1)
-            all_images.append(img)
-
-    if all_images:
-        total_count = len(all_images)
-        if total_count > spec.max_input_images:
-            print(
-                f"Error: {effective_model} モデルの画像上限は{spec.max_input_images}枚です"
-                f"（指定: {total_count}枚）。",
-                file=sys.stderr,
+    images = (args.input_image or []) + (args.reference or [])
+    total_size_mb = 0.0
+    for img in images:
+        err, size_mb = _validate_image_file(img)
+        if err:
+            _fail(f"Error: {err}")
+        total_size_mb += size_mb
+    if images:
+        if len(images) > spec.max_input_images:
+            _fail(
+                f"Error: {model} モデルの画像上限は{spec.max_input_images}枚です"
+                f"（指定: {len(images)}枚）。"
             )
-            sys.exit(1)
-        # 合計サイズチェック
-        total_size_mb = sum(
-            Path(img).stat().st_size / (1024 * 1024) for img in all_images
-        )
         if total_size_mb > MAX_FILE_SIZE_MB:
-            print(
-                f"Error: 画像の合計サイズが上限を超えています: {total_size_mb:.1f}MB（上限: {MAX_FILE_SIZE_MB}MB）",
-                file=sys.stderr,
+            _fail(
+                f"Error: 画像の合計サイズが上限を超えています: {total_size_mb:.1f}MB（上限: {MAX_FILE_SIZE_MB}MB）"
             )
-            sys.exit(1)
 
-    # セッションファイルの存在確認
-    if args.session and not Path(args.session).exists():
-        print(f"Error: Session file not found: {args.session}", file=sys.stderr)
-        sys.exit(1)
-
-    # chat と session は排他
-    if args.chat and args.session:
-        print(
-            "Error: --chat and --session are mutually exclusive. "
-            "Use --chat for new sessions, --session to continue.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    # マルチターン対応チェック
     if (args.chat or args.session) and not spec.supports_multi_turn:
-        print(
-            f"Error: Multi-turn chat (--chat/--session) is not available for the {effective_model} model.",
-            file=sys.stderr,
+        _fail(
+            f"Error: Multi-turn chat (--chat/--session) is not available for the {model} model."
         )
-        sys.exit(1)
 
-    # 出力ディレクトリの確認
     out_dir = Path(args.output_dir)
     if not out_dir.exists():
         out_dir.mkdir(parents=True, exist_ok=True)
         print(f"Created output directory: {out_dir}")
 
-    # 4K 時のタイムアウト自動調整（-s 4K を明示した経路）。
-    # 継続時は -s が無視されるためここでは調整せず、generate_chat がセッションの
-    # 実効解像度を見て調整する。
-    if not args.session and args.image_size == "4K" and args.timeout < 420:
-        args.timeout = 420
-        print("Note: Timeout auto-adjusted to 420s for 4K generation.")
 
-    return api_key
+def resolve_params(args):
+    """CLI / config / セッションから実効パラメータを解決し、検証まで済ませる。
+
+    継続セッションでは -m / -a / -s が効かない（ターン 1 の設定を引き継ぐ）。
+    この「効かない」という 1 つの事実をここだけに閉じ込め、Note の通知・実効値での
+    バリデーション・4K のタイムアウト引き上げをすべてこの解決サイトで完結させる。
+    """
+    if args.session and not Path(args.session).exists():
+        _fail(f"Error: Session file not found: {args.session}")
+    if args.chat and args.session:
+        _fail(
+            "Error: --chat and --session are mutually exclusive. "
+            "Use --chat for new sessions, --session to continue."
+        )
+
+    session_data = load_session(args.session) if args.session else None
+    session_path = args.session
+    previous_interaction_id = None
+
+    if session_data:
+        model_alias = session_data["model_alias"]
+        model_id = session_data["model_id"]
+        cfg = session_data.get("config", {})
+        aspect_ratio = cfg.get("aspect_ratio", args.aspect_ratio)
+        image_size = cfg.get("image_size")
+        turn_num = len(session_data["turns"]) + 1
+        previous_interaction_id = session_data["turns"][-1]["interaction_id"]
+        if args.aspect_ratio_explicit or args.image_size:
+            _note(
+                "Note: セッション継続では -a / -s は無視されます"
+                "（ターン 1 の設定を引き継ぎます）。"
+            )
+        if args.model_explicit and args.model != model_alias:
+            _note(f"Note: セッションのモデル {model_alias} を使用します（-m {args.model} は無視）。")
+    else:
+        model_alias = args.model
+        model_id = MODEL_SPECS[model_alias].id
+        aspect_ratio = args.aspect_ratio
+        image_size = args.image_size
+        turn_num = 1 if args.chat else 0
+        if args.chat:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            session_path = str(Path(args.output_dir) / f"session_{timestamp}.json")
+            session_data = {
+                "version": 2,
+                "api": "interactions",
+                "model_alias": model_alias,
+                "model_id": model_id,
+                "created": datetime.now(timezone.utc).isoformat(),
+                "config": {"aspect_ratio": aspect_ratio},
+                "turns": [],
+            }
+            if image_size:
+                session_data["config"]["image_size"] = image_size
+
+    params = EffectiveParams(
+        model_alias=model_alias,
+        model_id=model_id,
+        spec=MODEL_SPECS[model_alias],
+        aspect_ratio=aspect_ratio,
+        image_size=image_size,
+        timeout=args.timeout,
+        turn_num=turn_num,
+        previous_interaction_id=previous_interaction_id,
+        session_path=session_path,
+        session_data=session_data,
+    )
+    validate_args(args, params)
+
+    # 検証を通ってから通知する（不正な組み合わせで落ちる場合に調整を告げないため）
+    if params.image_size == "4K" and params.timeout < TIMEOUT_4K:
+        _note(f"Note: Timeout auto-adjusted to {TIMEOUT_4K}s for 4K generation.")
+        params = replace(params, timeout=TIMEOUT_4K)
+
+    return params
 
 
 def compose_full_prompt(args):
     """プロンプト注釈 + Negative Constraints を付加した最終プロンプトを組み立てる。"""
-    has_input = bool(args.input_image)
-    has_reference = bool(args.reference)
-    input_count = len(args.input_image) if args.input_image else 0
-    ref_count = len(args.reference) if args.reference else 0
+    input_count = len(args.input_image or [])
+    ref_count = len(args.reference or [])
 
-    augmented = _augment_prompt(
-        args.prompt, has_input, has_reference, input_count, ref_count
-    )
+    prompt = args.prompt
+    if ref_count:
+        # -i のみ・画像なしのときは注釈を付けない（既存動作を維持）
+        edit = f"Edit the {input_count} input image(s). " if input_count else ""
+        prompt = (
+            f"{edit}Use the {ref_count} reference image(s) "
+            f"for style and composition guidance. {prompt}"
+        )
     if args.negative_constraints:
-        return f"{augmented}\n\n{args.negative_constraints}"
-    return augmented
+        return f"{prompt}\n\n{args.negative_constraints}"
+    return prompt
 
 
 def _image_block(path_str):
@@ -575,26 +585,18 @@ def _image_block(path_str):
 
 def build_input(args, full_prompt):
     """input を組み立てる。画像がなければ文字列、あれば image/text ブロックの list を返す。"""
-    has_input = bool(args.input_image)
-    has_reference = bool(args.reference)
-    if not has_input and not has_reference:
+    images = (args.input_image or []) + (args.reference or [])
+    if not images:
         return full_prompt
-
-    blocks = []
-    for img_str in (args.input_image or []):
-        blocks.append(_image_block(img_str))
-    for ref_str in (args.reference or []):
-        blocks.append(_image_block(ref_str))
-    # テキストは最後
-    blocks.append({"type": "text", "text": full_prompt})
-    return blocks
+    # 順序は -i → -r → テキスト
+    return [_image_block(p) for p in images] + [{"type": "text", "text": full_prompt}]
 
 
 def build_response_format(aspect_ratio, image_size):
     """response_format（画像出力設定）を組み立てる。mime_type は指定しない。"""
     response_format = {"type": "image", "aspect_ratio": aspect_ratio}
     if image_size:
-        response_format["image_size"] = SIZE_MAP.get(image_size, image_size)
+        response_format["image_size"] = API_IMAGE_SIZE_OVERRIDES.get(image_size, image_size)
     return response_format
 
 
@@ -610,12 +612,30 @@ def build_tools(args):
     return [{"type": "google_search", "search_types": search_types}]
 
 
-def build_generation_config(thinking_level):
-    """generation_config（thinking）を組み立てる。未指定なら None。"""
-    if thinking_level:
-        # thinking_level は小文字のまま渡す（minimal|low|high）。
-        return {"thinking_level": thinking_level}
-    return None
+def build_create_kwargs(args, params, input_data, *, store=None, previous_interaction_id=None):
+    """interactions.create() の引数を組み立てる。
+
+    単発生成は store=False（interaction_id を使わないため、サーバー側保持を発生させない）。
+    継続は store を渡さず、サーバー既定 (store=true) に previous_interaction_id チェーンの
+    状態管理を任せる（保持期間 Paid 55 日 / Free 1 日）。
+    """
+    create_kwargs = {
+        "model": params.model_id,
+        "input": input_data,
+        "response_format": build_response_format(params.aspect_ratio, params.image_size),
+        "timeout": params.timeout,
+    }
+    if store is not None:
+        create_kwargs["store"] = store
+    if previous_interaction_id:
+        create_kwargs["previous_interaction_id"] = previous_interaction_id
+    tools = build_tools(args)
+    if tools:
+        create_kwargs["tools"] = tools
+    if args.thinking_level:
+        # thinking_level は小文字のまま渡す（minimal|low|high）
+        create_kwargs["generation_config"] = {"thinking_level": args.thinking_level}
+    return create_kwargs
 
 
 def load_session(session_path):
@@ -624,31 +644,30 @@ def load_session(session_path):
         with open(session_path, "r") as f:
             data = json.load(f)
     except (json.JSONDecodeError, OSError) as e:
-        print(f"Error: セッションファイルの読み込みに失敗しました: {e}", file=sys.stderr)
-        sys.exit(1)
+        _fail(f"Error: セッションファイルの読み込みに失敗しました: {e}")
 
     # 旧形式（generate_content 世代）検出
     if not isinstance(data, dict) or "history" in data or "version" not in data:
-        print(
+        _fail(
             "Error: 旧形式（generate_content 世代）のセッションは継続できません。"
-            "-c で新規セッションを開始してください。",
-            file=sys.stderr,
+            "-c で新規セッションを開始してください。"
         )
-        sys.exit(1)
 
     # v2 構造チェック（必須キー欠落・型不一致は破損扱い）
     try:
         if data.get("version") != 2 or data.get("api") != "interactions":
             raise KeyError("version/api")
         _ = data["model_id"]
-        _ = data["model_alias"]
+        # 継続はセッションのモデルで行うため、未知のエイリアス（廃止モデル等）は
+        # spec を引けず検証もできない。破損として扱う
+        if data["model_alias"] not in MODEL_SPECS:
+            raise KeyError("model_alias")
         turns = data["turns"]
         if not isinstance(turns, list) or not turns:
             raise KeyError("turns")
         _ = turns[-1]["interaction_id"]
     except (KeyError, TypeError, IndexError) as e:
-        print(f"Error: セッションファイルの形式が不正です（key: {e}）。", file=sys.stderr)
-        sys.exit(1)
+        _fail(f"Error: セッションファイルの形式が不正です（key: {e}）。")
 
     return data
 
@@ -674,6 +693,24 @@ def _build_filename(output_name, turn_num, call_index, img_count, timestamp=None
     return f"nanobanana_{timestamp}{turn}{variant}_{img_count}.png"
 
 
+def _unique_output_path(out_path):
+    """出力先に同名ファイルがあれば連番を振って回避する。
+
+    Returns:
+        tuple: (Path, renamed: bool) — renamed が True なら連番回避したことを示す。
+    """
+    p = Path(out_path)
+    if not p.exists():
+        return p, False
+    stem, suffix, parent = p.stem, p.suffix, p.parent
+    i = 2
+    while True:
+        candidate = parent / f"{stem}_{i}{suffix}"
+        if not candidate.exists():
+            return candidate, True
+        i += 1
+
+
 def extract_and_save_images(
     interaction, output_dir, output_name, turn_num=0, call_index=0, timestamp=None
 ):
@@ -685,6 +722,12 @@ def extract_and_save_images(
     Returns:
         tuple: (saved_paths, text_parts)
     """
+    # PIL が要るのは非 PNG の変換時だけ。欠落時は raw 保存に落ちる（下の except）
+    try:
+        from PIL import Image
+    except ImportError:
+        Image = None
+
     saved_paths = []
     text_parts = []
     images = []  # (base64_data, mime_type)
@@ -729,17 +772,21 @@ def extract_and_save_images(
         # 既存ファイルの黙殺上書きを防ぐ（連番で回避）
         out_path, renamed = _unique_output_path(out_path)
         if renamed:
-            print(f"Note: 同名ファイルが存在するため {out_path.name} に保存します（上書き回避）。")
+            _note(f"Note: 同名ファイルが存在するため {out_path.name} に保存します（上書き回避）。")
 
-        # PIL で PNG 保存に統一。失敗時のみ raw bytes を返却 mime の拡張子で保存。
         try:
-            from PIL import Image
-
-            image = Image.open(BytesIO(img_bytes))
-            image.save(str(out_path))
+            if mime_type == "image/png":
+                # 返却が PNG ならそのまま書く。PIL で開き直しても画素は同じで、
+                # 4K だと 30MB 超のバッファと再圧縮が無駄に走るだけ
+                out_path.write_bytes(img_bytes)
+            else:
+                if Image is None:
+                    raise ImportError("Pillow is not installed")
+                Image.open(BytesIO(img_bytes)).save(str(out_path))
             saved_paths.append(str(out_path))
             print(f"Saved: {out_path}")
         except Exception as e:
+            # PNG 化に失敗したら、返却 mime の拡張子で raw bytes を保存する
             try:
                 ext = EXT_FROM_MIME.get(mime_type, ".png")
                 raw_path, _ = _unique_output_path(out_path.with_suffix(ext))
@@ -762,8 +809,6 @@ def extract_and_save_images(
 def api_call_with_retry(client, create_kwargs):
     """Interactions API 呼び出しをリトライ付きで実行する。
 
-    例外分類は status_code のダックタイピングで行う（Interactions API の例外は
-    google.genai.errors.APIError と別階層のため）。
       - status_code == 429 / >= 500 / None（ネットワーク・タイムアウト系）→ リトライ
       - それ以外の 4xx → 即 raise
     タイムアウトは create_kwargs["timeout"]（秒）で各リクエストへ伝播する。
@@ -775,7 +820,7 @@ def api_call_with_retry(client, create_kwargs):
             return client.interactions.create(**create_kwargs)
         except Exception as e:
             last_error = e
-            status_code = getattr(e, "status_code", None)
+            status_code = _status_code(e)
 
             # リトライ不可能なエラー（429 以外の 4xx）は即 raise
             if status_code is not None and not (status_code == 429 or status_code >= 500):
@@ -795,9 +840,7 @@ def api_call_with_retry(client, create_kwargs):
 
 def list_available_models(api_key):
     """API に問い合わせて利用可能な画像生成モデル一覧を表示する。"""
-    from google import genai
-
-    client = genai.Client(api_key=api_key)
+    client = _client(api_key)
     print("Querying available image generation models...\n")
 
     image_models = []
@@ -837,18 +880,12 @@ def list_available_models(api_key):
         print(f"  {alias}: {spec.id}")
 
 
-def generate_single_shot(args, api_key):
+def generate_single_shot(args, params, api_key):
     """単発生成（text-to-image / 画像編集）。N 枚指定時はループで順次生成。"""
-    from google import genai
-
-    client = genai.Client(api_key=api_key)
-    model_id = MODEL_SPECS[args.model].id
-
-    full_prompt = compose_full_prompt(args)
-    input_data = build_input(args, full_prompt)
-    response_format = build_response_format(args.aspect_ratio, args.image_size)
-    tools = build_tools(args)
-    generation_config = build_generation_config(args.thinking_level)
+    client = _client(api_key)
+    create_kwargs = build_create_kwargs(
+        args, params, build_input(args, compose_full_prompt(args)), store=False
+    )
 
     all_saved_paths = []
     # -N の全バリエーションで同一のタイムスタンプを共有する（秒またぎ対策）
@@ -856,23 +893,9 @@ def generate_single_shot(args, api_key):
 
     for i in range(args.num_images):
         if args.num_images > 1:
-            print(f"\nGenerating image {i + 1}/{args.num_images} with {args.model} model ({model_id})...")
+            print(f"\nGenerating image {i + 1}/{args.num_images} with {params.model_alias} model ({params.model_id})...")
         else:
-            print(f"Generating with {args.model} model ({model_id})...")
-
-        create_kwargs = {
-            "model": model_id,
-            "input": input_data,
-            "response_format": response_format,
-            # 単発生成は interaction_id を使わないため、サーバー側保持
-            # （Paid 55 日 / Free 1 日）を発生させない
-            "store": False,
-            "timeout": args.timeout,
-        }
-        if tools:
-            create_kwargs["tools"] = tools
-        if generation_config:
-            create_kwargs["generation_config"] = generation_config
+            print(f"Generating with {params.model_alias} model ({params.model_id})...")
 
         try:
             interaction = api_call_with_retry(client, create_kwargs)
@@ -880,6 +903,7 @@ def generate_single_shot(args, api_key):
                 interaction,
                 args.output_dir,
                 args.output_name,
+                turn_num=params.turn_num,
                 call_index=i,
                 timestamp=run_timestamp,
             )
@@ -901,84 +925,29 @@ def generate_single_shot(args, api_key):
     return all_saved_paths
 
 
-def generate_chat(args, api_key):
+def generate_chat(args, params, api_key):
     """マルチターンチャット（セッションファイル v2 管理、サーバー側状態を利用）。"""
-    from google import genai
-
-    client = genai.Client(api_key=api_key)
-
-    previous_interaction_id = None
+    client = _client(api_key)
+    session_data = params.session_data
 
     if args.session:
-        # 既存セッションを継続。モデル・出力設定はセッション側を優先する。
-        session_data = load_session(args.session)
-        session_path = args.session
-        model_alias = session_data["model_alias"]
-        model_id = session_data["model_id"]
-        if args.model_explicit and args.model != model_alias:
-            print(
-                f"Note: セッションのモデル {model_alias} を使用します（-m {args.model} は無視）。",
-                file=sys.stderr,
-            )
-        turn_num = len(session_data["turns"]) + 1
-        previous_interaction_id = session_data["turns"][-1]["interaction_id"]
-        cfg = session_data.get("config", {})
-        aspect_ratio = cfg.get("aspect_ratio", args.aspect_ratio)
-        image_size = cfg.get("image_size")
-        print(f"Continuing session (turn {turn_num}): {args.session}")
+        print(f"Continuing session (turn {params.turn_num}): {params.session_path}")
     else:
-        # 新規セッション
-        model_alias = args.model
-        model_id = MODEL_SPECS[args.model].id
-        turn_num = 1
-        aspect_ratio = args.aspect_ratio
-        image_size = args.image_size
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        session_path = str(Path(args.output_dir) / f"session_{timestamp}.json")
-        session_data = {
-            "version": 2,
-            "api": "interactions",
-            "model_alias": model_alias,
-            "model_id": model_id,
-            "created": datetime.now(timezone.utc).isoformat(),
-            "config": {"aspect_ratio": aspect_ratio},
-            "turns": [],
-        }
-        if image_size:
-            session_data["config"]["image_size"] = image_size
-        print(f"Starting new chat session: {session_path}")
-
-    # 継続時、実効解像度が 4K ならタイムアウトを再調整する（-s 未指定でも効かせる）。
-    if image_size == "4K" and args.timeout < 420:
-        args.timeout = 420
-        print("Note: Timeout auto-adjusted to 420s for 4K generation.")
+        print(f"Starting new chat session: {params.session_path}")
 
     full_prompt = compose_full_prompt(args)
-    input_data = build_input(args, full_prompt)
-    response_format = build_response_format(aspect_ratio, image_size)
-    tools = build_tools(args)
-    generation_config = build_generation_config(args.thinking_level)
+    create_kwargs = build_create_kwargs(
+        args,
+        params,
+        build_input(args, full_prompt),
+        previous_interaction_id=params.previous_interaction_id,
+    )
 
-    create_kwargs = {
-        "model": model_id,
-        "input": input_data,
-        "response_format": response_format,
-        # store は指定しない: サーバー既定 (store=true) が previous_interaction_id
-        # チェーンの状態管理を担う（保持期間 Paid 55 日 / Free 1 日）
-        "timeout": args.timeout,
-    }
-    if previous_interaction_id:
-        create_kwargs["previous_interaction_id"] = previous_interaction_id
-    if tools:
-        create_kwargs["tools"] = tools
-    if generation_config:
-        create_kwargs["generation_config"] = generation_config
-
-    print(f"Generating with {model_alias} model ({model_id})...")
+    print(f"Generating with {params.model_alias} model ({params.model_id})...")
     try:
         interaction = api_call_with_retry(client, create_kwargs)
     except Exception as e:
-        if previous_interaction_id and getattr(e, "status_code", None) == 404:
+        if params.previous_interaction_id and _status_code(e) == 404:
             print(
                 "Error: 前回の interaction が見つかりません。セッションの保持期限切れ"
                 "（Paid Tier 55 日 / Free Tier 1 日）の可能性があります。"
@@ -989,7 +958,7 @@ def generate_chat(args, api_key):
         raise
 
     saved_paths, text_parts = extract_and_save_images(
-        interaction, args.output_dir, args.output_name, turn_num=turn_num
+        interaction, args.output_dir, args.output_name, turn_num=params.turn_num
     )
     for text in text_parts:
         print(f"\nModel response: {text}")
@@ -999,19 +968,18 @@ def generate_chat(args, api_key):
         sys.exit(2)
 
     # セッション履歴（turn）を追記
-    interaction_id = getattr(interaction, "id", None)
     session_data["turns"].append({
-        "turn": turn_num,
+        "turn": params.turn_num,
         "prompt": full_prompt,
-        "interaction_id": interaction_id,
+        "interaction_id": getattr(interaction, "id", None),
         "images": [str(Path(p).resolve()) for p in saved_paths],
         "text": "\n".join(text_parts),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     })
 
-    save_session(session_path, session_data)
-    print(f"\nSession saved: {session_path}")
-    print(f"To continue: generate_image.py -p '<next prompt>' --session {session_path}")
+    save_session(params.session_path, session_data)
+    print(f"\nSession saved: {params.session_path}")
+    print(f"To continue: generate_image.py -p '<next prompt>' --session {params.session_path}")
 
     return saved_paths
 
@@ -1025,43 +993,33 @@ def main():
     try:
         from google import genai  # noqa: F401
     except ImportError:
-        print("Error: google-genai package is not installed.", file=sys.stderr)
-        print(
+        _fail(
+            "Error: google-genai package is not installed.",
             '  Install with: pip install -U "google-genai>=2.11.0" Pillow',
-            file=sys.stderr,
         )
-        sys.exit(1)
 
     # --list-models は --prompt 不要で実行可能
     if args.list_models:
-        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-        if not api_key:
-            print(
-                "Error: GEMINI_API_KEY or GOOGLE_API_KEY environment variable is required.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        list_available_models(api_key)
+        list_available_models(_require_api_key())
         sys.exit(0)
 
     # --prompt は --list-models 以外では必須
     if not args.prompt:
-        print("Error: --prompt (-p) is required.", file=sys.stderr)
-        sys.exit(1)
+        _fail("Error: --prompt (-p) is required.")
 
-    api_key = validate_args(args)
+    api_key = _require_api_key()
+    params = resolve_params(args)
 
     try:
         if args.chat or args.session:
-            generate_chat(args, api_key)
+            generate_chat(args, params, api_key)
         else:
-            generate_single_shot(args, api_key)
+            generate_single_shot(args, params, api_key)
     except KeyboardInterrupt:
         print("\nCancelled by user.", file=sys.stderr)
         sys.exit(130)
     except Exception as e:
-        # 例外分類は status_code のダックタイピングで行う（部分文字列マッチは廃止）
-        status_code = getattr(e, "status_code", None)
+        status_code = _status_code(e)
         if status_code == 429:
             print(f"Error: Rate limit exceeded. Please wait and retry.\n{e}", file=sys.stderr)
         elif status_code == 403:
