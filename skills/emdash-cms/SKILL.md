@@ -285,6 +285,16 @@ claude mcp add --transport http emdash-docs https://docs.emdashcms.com/mcp
 
 サイト管理用は自サイトの URL 配下（`https://<your-site>/_emdash/api/mcp`）を指定し、上記いずれかの認証を通す。
 
+### Cloudflare 公式 MCP との連携（接続済みなら優先。CLI が実行骨格）
+
+公式プラグイン `cloudflare` の MCP サーバーが接続済み（OAuth 認証済み）なら、次を CLI コマンドの代わりに使ってよい。未接続・未認証の場合は従来どおり CLI で続行する。
+
+- **Cloudflare 側仕様の裏取り** ─ `cloudflare-docs`（認証不要・常時使用可）。Email Service / Dynamic Workers / D1 / wrangler の最新仕様確認の第一手段としてよい。EmDash 本体の仕様は上記 docs 検索 MCP（`https://docs.emdashcms.com/mcp`）か GitHub リポジトリが正本
+- **D1 / R2 / KV の作成・確認** ─ `cloudflare-bindings`。未接続時は `wrangler d1 create` / `wrangler r2 bucket create` / `wrangler kv namespace create` 等の CLI
+- **本番ログ確認** ─ `cloudflare-observability`（メール transport 失敗・sandboxed プラグインのエラー等の調査）。未接続時は `wrangler tail`
+
+デプロイ状態の確認（`cloudflare-builds`）は、委譲先の `deploy-astro-cloudflare` 側のガイダンスに従う。
+
 ## CLI
 
 `pnpm exec emdash <command>`。よく使うもの:

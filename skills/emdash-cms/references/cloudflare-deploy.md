@@ -320,6 +320,15 @@ wrangler secret put EMDASH_ENCRYPTION_KEY
 
 デプロイ実行の詳細な手順・モード選択・完了確認は `deploy-astro-cloudflare` スキルに従う（プレビュー環境用の `wrangler.jsonc` の `env.preview` 設定例は上記「プレビュー環境でのリハーサル」を参照）。
 
+## MCP 連携（接続済みなら優先。CLI が実行骨格）
+
+公式プラグイン `cloudflare` の MCP サーバーが接続済み（OAuth 認証済み）なら、次を CLI コマンドの代わりに使ってよい。未接続・未認証の場合は従来どおり CLI で続行する。
+
+- **D1 / R2 / KV の作成・確認** ─ `cloudflare-bindings`（データベース・バケット・namespace の作成/一覧/取得）。未接続時は `wrangler d1 create <name>` / `wrangler r2 bucket create <name>` / `wrangler kv namespace create <name>`
+- **本番ログ確認** ─ `cloudflare-observability`（Worker ログ・分析）。未接続時は `wrangler tail`
+- **ドキュメント疑問点の確認** ─ `cloudflare-docs`（認証不要・常時使用可）。Email Service / Dynamic Workers / D1 / Hyperdrive の仕様確認の第一手段としてよい
+- **デプロイ状態確認** ─ `cloudflare-builds` は委譲先 `deploy-astro-cloudflare` 側のガイダンスに従う
+
 ## トラブルシューティング
 
 | エラー | 対応 |
@@ -330,6 +339,7 @@ wrangler secret put EMDASH_ENCRYPTION_KEY
 | スケジュール公開が動かない | `wrangler.jsonc` に `triggers.crons` があるか、`src/worker.ts` が `@emdash-cms/cloudflare/worker` の `PluginBridge` を export しているか確認する |
 | メール送信が "Email is not configured" | `cloudflareEmail()` プラグインを有効化し、**設定 → Email** でプロバイダとして選択したか確認する（有効化だけでは自動選択されない） |
 | SSR リクエストがハングし、ログに何も出ない | `session: "auto"`（D1 read replica）と compatibility flag `global_fetch_strictly_public` を併用していないか確認する |
+| 本番でエラーが再現するがログを追いたい | 接続済みなら `cloudflare-observability` MCP で本番ログ・分析を確認。未接続時は `wrangler tail` |
 
 ## 参照ドキュメント
 

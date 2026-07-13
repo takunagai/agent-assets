@@ -84,6 +84,17 @@ skills/emdash-cms/
 
 ---
 
+## MCP 連携（接続済みなら優先。CLI が実行骨格）
+
+公式プラグイン `cloudflare` の MCP サーバーが接続済み（OAuth 認証済み）なら、次を CLI コマンドの代わりに使います。未接続・未認証の場合は従来どおり CLI で続行します。
+
+- **Cloudflare 側仕様の裏取り** ─ `cloudflare-docs`（認証不要・常時使用可）。Email Service / Dynamic Workers / D1 の仕様確認の第一手段。EmDash 本体の仕様は docs 検索 MCP（`https://docs.emdashcms.com/mcp`）か GitHub が正本
+- **D1 / R2 / KV の作成・確認** ─ `cloudflare-bindings`。未接続時は `wrangler d1 create` 等の CLI
+- **本番ログ確認** ─ `cloudflare-observability`。未接続時は `wrangler tail`
+- **デプロイ状態確認** ─ `cloudflare-builds` は委譲先 `deploy-astro-cloudflare` 側のガイダンスに従う
+
+---
+
 ## 制約・注意
 
 - **Dynamic Workers（sandboxed プラグイン実行）は Open Beta・Workers Paid プラン必須**（Open Beta 開始は 2026-03-24 ─ Cloudflare changelog）。無料プランでは sandboxed プラグインを実行できず、native（trusted）プラグインのみに構成を絞る必要があります。料金は月 1,000 個までの unique Dynamic Worker 作成が無料枠、超過は 1 個・1 日あたり $0.002。
