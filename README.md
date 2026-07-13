@@ -76,6 +76,7 @@ ln -s ~/Projects/agent-assets/agents/<name>.md ~/.claude/agents/<name>.md
 | mac-gui-router | Mac の GUI 操作・スクショ依頼の方式判定ルーター。公式 computer-use / 自作ループ（screencapture + CGEvent）/ chrome-devtools から最適を選び、操作 = 公式・撮影 = 自作のハイブリッド（操作マニュアル作成）にも対応。要ヘルパー 3 種（付属手順でビルド） | [docs/mac-gui-router.md](docs/mac-gui-router.md) |
 | claude-config-audit | `~/.claude` グローバル設定の健全性検査。死 symlink・disabled なのにキャッシュ残存の plugin・MCP 重複登録・orphan commands を検出。レポートのみ・自動削除なし。pre-add モードで追加前の重複チェックも可能 | [docs/claude-config-audit.md](docs/claude-config-audit.md) |
 | handover-scaffold | 別セッションで無人実行させる「指示書（引き継ぎドキュメント）」の骨組みを一発生成。`handover/` バッチのフォルダ・`00_実行順.md` マニフェスト・指示書スケルトンを規約どおりに作成 | [docs/handover-scaffold.md](docs/handover-scaffold.md) |
+| emdash-cms | EmDash（Astro + Cloudflare の full-stack TypeScript CMS、emdash 0.29 基準）の構築支援。セットアップ・コンテンツモデリング・クエリ / Portable Text・認証・プラグイン開発（sandboxed / native）・メール（公式 `cloudflareEmail()` + Email Service）・Forms・WordPress 移行・MCP 連携。v0.x ベータのため鮮度検証手順を内蔵 | [docs/emdash-cms.md](docs/emdash-cms.md) |
 
 ## サブエージェント一覧
 
