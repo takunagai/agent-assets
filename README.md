@@ -58,7 +58,7 @@ ln -s ~/Projects/agent-assets/agents/<name>.md ~/.claude/agents/<name>.md
 | スキル | 概要 | ドキュメント |
 |--------|------|-------------|
 | interactive-art-builder | ビジュアル × サウンド × 操作のインタラクティブ・アートを、3 ラウンドの対話ウィザード（感情ゴール → コア操作 → 感覚設計 → 公開計画）でアイデアから実装・数値検証・公開まで一気通貫で構築。ウェブ（p5.js + Web Audio + Strudel）とネイティブ（SuperCollider + Processing + Tidal）両対応、実証済みの落とし穴 20 項目の知識ベース同梱 | [docs/interactive-art-builder.md](docs/interactive-art-builder.md) |
-| cc-fork-delete | Claude Code のフォークセッションを sid 指定で安全削除（dry-run → 確認 → 実行、既定はゴミ箱退避） | [docs/cc-fork-delete.md](docs/cc-fork-delete.md) |
+| cc-fork-delete | Claude Code のフォークセッションを sid 指定で安全削除（dry-run → 確認 → 実行、既定はゴミ箱退避）。プレビューにフォーク系図（ASCII ツリー）と子フォーク警告つき、`--tree-all` で全家系表示 | [docs/cc-fork-delete.md](docs/cc-fork-delete.md) |
 | cc-project-relocate | Claude Code のプロジェクトを移動・リネームした後、パスに紐づくセッションログ dir（会話・memory）を新パスへリネーム/マージ。任意で `~/.claude.json` の trust/権限も移行。本体と同一エンコードを node で計算、dry-run → 確認 → 実行 | [docs/cc-project-relocate.md](docs/cc-project-relocate.md) |
 | astro-code-review | Astro 7+ プロジェクト（Cloudflare Workers デプロイ対応）のコードを体系的にレビュー。ベストプラクティス違反・パフォーマンス・a11y・型安全性・レガシー API（5→6 削除済み）・Astro 7 移行問題（Rust コンパイラ HTML 厳格化・Sätteri・src/fetch.ts 予約名）を検出 | [docs/astro-code-review.md](docs/astro-code-review.md) |
 | gen-nanobanana-images | Google Gemini の画像生成モデル Nano Banana シリーズ GA 版（Flash2 / Pro / Nano Banana 2 Lite）で、Interactions API 基盤のテキストからの画像生成・画像編集・スタイルリファレンス・マルチターン反復修正を行う。生成のたびに出力先へ生成記録 Markdown（指示原文・プロンプト・料金目安・検証メモ）を自動作成。要 `GEMINI_API_KEY`・SDK >= 2.11.0 | [docs/gen-nanobanana-images.md](docs/gen-nanobanana-images.md) |

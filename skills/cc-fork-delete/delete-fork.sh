@@ -5,6 +5,7 @@
 #   delete-fork.sh <sid>                 # dry-run（削除対象を表示するだけ。既定）
 #   delete-fork.sh <sid> --apply         # 実行（ゴミ箱 ~/.claude/.trash へ退避＝復元可）
 #   delete-fork.sh <sid> --apply --purge # 実行（rm で完全削除＝復元不可）
+#   delete-fork.sh <sid> --tree-all      # 系図をプロジェクト全体（全家系）で表示（他は不変）
 #
 # 安全ガード:
 #   - SID は UUID 形式のみ受理
@@ -19,11 +20,13 @@ set -uo pipefail
 SID="${1:-}"
 APPLY=0
 PURGE=0
+TREE_ALL=0
 shift 2>/dev/null || true
 for a in "$@"; do
   case "$a" in
     --apply) APPLY=1 ;;
     --purge) PURGE=1 ;;
+    --tree-all) TREE_ALL=1 ;;
     *) echo "ERROR: 不明な引数: $a" >&2; exit 2 ;;
   esac
 done
@@ -129,6 +132,175 @@ echo "対象セッション   : $SID"
 echo "フォーク元(残す) : $FORKED_FROM"
 echo "プロジェクト     : $PROJ_DIR"
 echo "方式             : $([ $PURGE -eq 1 ] && echo '完全削除 (rm)' || echo 'ゴミ箱退避（復元可）')"
+
+# 8.5) フォーク系図（ASCII ツリー）
+#   プロジェクト dir 直下の *.jsonl から親子（forkedFrom）関係を再構築し、削除対象の家系を可視化する。
+#   既定は削除対象の家系（根から下の全子孫）だけを描画。--tree-all で全家系を描画。
+#   系図はベストエフォート。構築に失敗しても削除フロー本体は止めない。
+echo "==== フォーク系図 ===="
+GENEALOGY=$(python3 - "$PROJ_DIR" "$SID" "$SESS_DIR" "$TREE_ALL" 2>/dev/null <<'PY'
+import sys, os, glob, json, time
+
+proj_dir, target, sess_dir, tree_all_arg = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+tree_all = tree_all_arg == "1"
+
+# プロジェクト dir 直下の *.jsonl のみ走査（サブディレクトリの subagents 等は対象外）
+nodes = {}  # sid -> {parent, mtime, lines, missing_parent}
+for path in glob.glob(os.path.join(proj_dir, "*.jsonl")):
+    sid = os.path.basename(path)[:-6]  # 末尾 ".jsonl" を除去
+    parent, first, line_count = None, "", 0
+    try:
+        with open(path, "rb") as fh:
+            for i, raw in enumerate(fh):
+                if i == 0:
+                    first = raw.decode("utf-8", "replace")
+                line_count += 1
+    except Exception:
+        pass
+    # 先頭行の forkedFrom は文字列 / {'sessionId':...} の 2 形式（本体の抽出方針と同じ）
+    try:
+        ff = json.loads(first).get("forkedFrom") if first.strip() else None
+        if isinstance(ff, dict):
+            parent = ff.get("sessionId") or None
+        elif isinstance(ff, str):
+            parent = ff or None
+    except Exception:
+        parent = None
+    try:
+        mtime = os.path.getmtime(path)
+    except Exception:
+        mtime = 0
+    nodes[sid] = {"parent": parent, "mtime": mtime, "lines": line_count}
+
+# 対象が拾えないのは異常。系図は諦めて本体に任せる
+if target not in nodes:
+    sys.exit(1)
+
+# 親子マップと「実体のない親（transcript 欠落）」判定
+children = {}
+for sid, info in nodes.items():
+    p = info["parent"]
+    info["missing_parent"] = bool(p) and p not in nodes
+    if p and p in nodes:
+        children.setdefault(p, []).append(sid)
+
+# セッション名（sessions/*.json を sessionId 厳密一致で突合。name が非空なら採用）
+names = {}
+if sess_dir and os.path.isdir(sess_dir):
+    for jf in glob.glob(os.path.join(sess_dir, "*.json")):
+        try:
+            with open(jf, encoding="utf-8") as fh:
+                d = json.load(fh)
+        except Exception:
+            continue
+        s, nm = d.get("sessionId"), d.get("name")
+        if s and nm:
+            names[s] = nm
+
+# 削除対象の子孫（⚠ マーカーと子フォーク警告の母数）
+def descendants(root):
+    out, stack = set(), list(children.get(root, []))
+    while stack:
+        c = stack.pop()
+        if c in out:
+            continue
+        out.add(c)
+        stack.extend(children.get(c, []))
+    return out
+
+target_desc = descendants(target)
+
+# 削除対象の先祖（根まで遡る。親 transcript が欠落したらそこで打ち切り）
+def ancestors(node):
+    out, seen, cur = [], set(), nodes[node]["parent"]
+    while cur and cur in nodes and cur not in seen:
+        seen.add(cur)
+        out.append(cur)
+        cur = nodes[cur]["parent"]
+    return out
+
+target_anc = ancestors(target)
+family_root = target_anc[-1] if target_anc else target  # 家系の見える範囲での根
+
+# 兄弟（同じ直近の親を持つ、対象以外のノード）
+tp = nodes[target]["parent"]
+target_sib = (set(children.get(tp, [])) - {target}) if (tp and tp in nodes) else set()
+
+# 描画する根の集合（既定は削除対象の家系のみ、--tree-all は全家系）
+if tree_all:
+    roots = [s for s, info in nodes.items() if not info["parent"] or info["missing_parent"]]
+else:
+    roots = [family_root]
+roots.sort(key=lambda s: nodes[s]["mtime"])
+
+def marker(sid):
+    if sid == target:
+        return "✗"      # 削除対象
+    if sid in target_desc:
+        return "⚠"      # 削除対象の子孫
+    if not nodes[sid]["parent"] or nodes[sid]["missing_parent"]:
+        return "●"      # 大元（根）
+    return "○"          # その他の残るノード
+
+def annotation(sid):
+    info = nodes[sid]
+    if sid == target:
+        return "[削除対象]" + (" (親 transcript 欠落)" if info["missing_parent"] else "")
+    if sid in target_desc:
+        return "(削除対象の子孫・残る)"
+    if not info["parent"]:
+        return "(大元・残す)"
+    if info["missing_parent"]:
+        return "(親 transcript 欠落・残す)"
+    if sid in target_anc:
+        return "(先祖・残す)"
+    if sid in target_sib:
+        return "(兄弟・残す)"
+    return "(残す)"
+
+def label(sid):
+    info = nodes[sid]
+    mt = time.strftime("%Y-%m-%d %H:%M", time.localtime(info["mtime"])) if info["mtime"] else "日時不明"
+    parts = [marker(sid), sid[:8], annotation(sid), mt, "%d行" % info["lines"]]
+    nm = names.get(sid)
+    if nm:
+        parts.append(nm)
+    return " ".join(parts)
+
+out = []
+def render(sid, prefix, is_last, is_root):
+    if is_root:
+        out.append(label(sid))
+        child_prefix = ""
+    else:
+        out.append(prefix + ("└─ " if is_last else "├─ ") + label(sid))
+        child_prefix = prefix + ("    " if is_last else "│   ")
+    kids = sorted(children.get(sid, []), key=lambda s: nodes[s]["mtime"])  # 子は mtime 昇順
+    for i, k in enumerate(kids):
+        render(k, child_prefix, i == len(kids) - 1, False)
+
+for r in roots:
+    render(r, "", True, True)
+
+# 子フォーク検知（警告のみ・削除はブロックしない）
+if target_desc:
+    n = len(target_desc)
+    out.append("")
+    out.append("WARNING: 削除対象には子フォークが %d 件あります。" % n)
+    out.append("         このまま削除すると、子フォークの forkedFrom 参照先（親）が失われます。")
+    out.append("         子フォークの transcript 自体は残りますが、系譜がたどれなくなります。")
+    out.append("         子フォークも消したい場合は、各 sid を指定してこのスキルを再実行してください。")
+    out.append("         （削除自体は中止しません）")
+
+print("\n".join(out))
+PY
+)
+if [ $? -eq 0 ] && [ -n "$GENEALOGY" ]; then
+  printf '%s\n' "$GENEALOGY"
+else
+  echo "（系図を構築できませんでした）"
+fi
+
 echo "--- セッション実体（削除/退避）---"
 for t in "${TARGETS[@]}"; do echo "  $t"; done
 echo "--- Vault 全文ログ（ファイルごと削除/退避）---"

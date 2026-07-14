@@ -13,6 +13,9 @@ FORK_SID="22222222-2222-2222-2222-222222222222"
 FORK2_SID="33333333-3333-3333-3333-333333333333"  # forkedFrom が dict 形式
 NONFORK_SID="44444444-4444-4444-4444-444444444444" # forkedFrom なし(大元)
 OTHER_SID="55555555-5555-5555-5555-555555555555"
+FORKCHILD_SID="66666666-6666-6666-6666-666666666666" # フォークの子(孫フォーク) forkedFrom=FORK_SID
+ORPHAN_SID="77777777-7777-7777-7777-777777777777"    # 親 transcript が存在しないフォーク
+MISSING_SID="00000000-0000-0000-0000-000000000000"   # 実体のない親(欠落)
 
 PASS=0; FAIL=0
 ok()   { PASS=$((PASS+1)); printf "  \033[32mPASS\033[0m %s\n" "$1"; }
@@ -20,7 +23,9 @@ ng()   { FAIL=$((FAIL+1)); printf "  \033[31mFAIL\033[0m %s\n" "$1"; }
 check(){ if eval "$2"; then ok "$1"; else ng "$1  [条件: $2]"; fi; }
 
 # サンドボックスを一式組み立てて、その HOME を echo する
+# $1（任意）: grandchild=孫フォークを足す / orphan=親 transcript 欠落フォークを足す
 make_sandbox() {
+  local EXTRA="${1:-}"
   local SB; SB=$(mktemp -d)
   local PROJ="$SB/.claude/projects/-demo-project"
   mkdir -p "$PROJ" "$SB/.claude/sessions" "$SB/.claude/.trash"
@@ -49,6 +54,14 @@ EOF
   # Vault 全文ログ: ヘッダ一致(消える) / 本文だけ言及(残る) / 別 sid(残る)
   printf '%s\n' "**セッションID**: $FORK_SID" "本文" > "$VAULT/Log/Session/fork-log.md"
   printf '%s\n' "**セッションID**: $OTHER_SID" "本文中に $FORK_SID が出てくるだけ" > "$VAULT/Log/Session/mention-only.md"
+
+  # 系図テスト用の追加フィクスチャ（既定では作らない）
+  case "$EXTRA" in
+    grandchild)  # フォークの子(孫フォーク): forkedFrom=FORK_SID → 削除対象の子孫
+      printf '%s\n' '{"sessionId":"'"$FORKCHILD_SID"'","forkedFrom":"'"$FORK_SID"'"}' > "$PROJ/$FORKCHILD_SID.jsonl" ;;
+    orphan)      # 親 transcript が存在しないフォーク
+      printf '%s\n' '{"sessionId":"'"$ORPHAN_SID"'","forkedFrom":"'"$MISSING_SID"'"}' > "$PROJ/$ORPHAN_SID.jsonl" ;;
+  esac
 
   # mtime を古くして「直近更新」警告を避ける
   find "$SB" -exec touch -t 202601010000 {} + 2>/dev/null
@@ -173,6 +186,67 @@ OUT=$(run "$SB" "$FORK_SID"); RC=$?
 check "exit 0(Vault 無しでも止まらない)"        "[ $RC -eq 0 ]"
 check "全文ログは(なし)表示"                    "echo \"\$OUT\" | grep -A1 '全文ログ' | grep -q 'なし'"
 check "索引は(なし)表示"                        "echo \"\$OUT\" | grep -A1 '索引' | grep -q 'なし'"
+rm -rf "$SB"
+
+############################################
+echo; echo "■ ケース11: 系図セクション（削除対象=✗ / 大元=●）"
+SB=$(make_sandbox)
+OUT=$(run "$SB" "$FORK_SID"); RC=$?
+check "exit 0"                                "[ $RC -eq 0 ]"
+check "フォーク系図セクションを出力"            "echo \"\$OUT\" | grep -q 'フォーク系図'"
+check "削除対象に ✗ マーカー"                  "echo \"\$OUT\" | grep -q '✗ ${FORK_SID:0:8}'"
+check "大元に ● マーカー"                      "echo \"\$OUT\" | grep -q '● ${PARENT_SID:0:8}'"
+check "[削除対象] 注記を表示"                   "echo \"\$OUT\" | grep -qF '[削除対象]'"
+check "兄弟フォークは残す注記(○)"              "echo \"\$OUT\" | grep -q '○ ${FORK2_SID:0:8}'"
+check "系図構築失敗メッセージは出ない"          "! echo \"\$OUT\" | grep -q '系図を構築できませんでした'"
+rm -rf "$SB"
+
+############################################
+echo; echo "■ ケース12: フォークのフォーク（⚠ と子フォーク WARNING・ブロックしない）"
+SB=$(make_sandbox grandchild)
+OUT=$(run "$SB" "$FORK_SID"); RC=$?
+check "exit 0（警告のみで中止しない）"          "[ $RC -eq 0 ]"
+check "子孫フォークに ⚠ マーカー"              "echo \"\$OUT\" | grep -q '⚠ ${FORKCHILD_SID:0:8}'"
+check "子フォーク WARNING（件数表示）"          "echo \"\$OUT\" | grep -q '子フォークが 1 件'"
+check "削除を中止しない旨を明記"                "echo \"\$OUT\" | grep -q '中止しません'"
+rm -rf "$SB"
+# --apply でも子フォーク警告は削除をブロックしない（子の transcript は残る）
+SB=$(make_sandbox grandchild)
+OUT=$(run "$SB" "$FORK_SID" --apply); RC=$?
+P="$SB/.claude/projects/-demo-project"
+check "exit 0（--apply も完走）"               "[ $RC -eq 0 ]"
+check "削除対象フォークが消えた"                "[ ! -f '$P/$FORK_SID.jsonl' ]"
+check "★子フォークの transcript は残る"        "[ -f '$P/$FORKCHILD_SID.jsonl' ]"
+check "★親(大元)は残る"                        "[ -f '$P/$PARENT_SID.jsonl' ]"
+rm -rf "$SB"
+
+############################################
+echo; echo "■ ケース13: --tree-all で家系外の別ルートも表示"
+SB=$(make_sandbox)
+OUT=$(run "$SB" "$FORK_SID" --tree-all); RC=$?
+check "exit 0"                                "[ $RC -eq 0 ]"
+check "家系外ルート(大元)も ● で表示"          "echo \"\$OUT\" | grep -q '● ${NONFORK_SID:0:8}'"
+rm -rf "$SB"
+# 既定（--tree-all なし）では家系外ルートは描かない
+SB=$(make_sandbox)
+OUT=$(run "$SB" "$FORK_SID"); RC=$?
+check "★既定では家系外ルートを出さない"        "! echo \"\$OUT\" | grep -q '${NONFORK_SID:0:8}'"
+rm -rf "$SB"
+
+############################################
+echo; echo "■ ケース14: 親 transcript 欠落でも系図が落ちず削除フロー続行"
+SB=$(make_sandbox orphan)
+OUT=$(run "$SB" "$ORPHAN_SID"); RC=$?
+check "exit 0（dry-run 続行）"                 "[ $RC -eq 0 ]"
+check "系図セクションは出力される"              "echo \"\$OUT\" | grep -q 'フォーク系図'"
+check "系図構築失敗にならない"                  "! echo \"\$OUT\" | grep -q '系図を構築できませんでした'"
+check "親 transcript 欠落の注記を表示"          "echo \"\$OUT\" | grep -q '親 transcript 欠落'"
+rm -rf "$SB"
+# --apply も欠落フォークを完走して削除できる
+SB=$(make_sandbox orphan)
+OUT=$(run "$SB" "$ORPHAN_SID" --apply); RC=$?
+check "exit 0（--apply 完走）"                 "[ $RC -eq 0 ]"
+check "欠落フォークの transcript が消えた"       "[ ! -f '$SB/.claude/projects/-demo-project/$ORPHAN_SID.jsonl' ]"
 rm -rf "$SB"
 
 echo
