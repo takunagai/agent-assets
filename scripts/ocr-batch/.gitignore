@@ -1,0 +1,9 @@
+# コンパイル済みバイナリ（各自 `swiftc -O ocr.swift -o ocr` でビルド）
+ocr
+
+# --txt モードの OCR サイドカー出力（リポジトリには含めない）
+*.png.txt
+*.jpg.txt
+*.jpeg.txt
+*.webp.txt
+*.heic.txt

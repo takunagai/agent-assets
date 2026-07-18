@@ -1,0 +1,5 @@
+# コンパイル済みバイナリ（各自 swiftc でビルド）
+#   swiftc -O click.swift -o click
+#   swiftc -O displays.swift -o displays
+click
+displays

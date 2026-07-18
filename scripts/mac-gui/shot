@@ -1,0 +1,26 @@
+#!/bin/bash
+# GUI 操作ループ用スクショラッパー
+# 使い方: shot <ファイル名>.png [screencapture の追加オプション...]
+#   例: shot settings.png -R1846,25,1621,1055
+# 保存先: ~/Downloads/GUIスクショ/<YYYY-MM-DD_HHMM>/
+# 30 分以内の連続撮影は同じフォルダにまとまる（1 タスク 1 フォルダ）
+set -euo pipefail
+BASE="$HOME/Downloads/GUIスクショ"
+STATE="${TMPDIR:-/tmp}/mac-gui-shot-current-dir"
+name="${1:?usage: shot <name>.png [screencapture options...]}"
+shift || true
+dir=""
+if [[ -f "$STATE" ]]; then
+  last=$(stat -f %m "$STATE")
+  if (( $(date +%s) - last < 1800 )); then
+    dir=$(cat "$STATE")
+  fi
+fi
+if [[ -z "$dir" || ! -d "$dir" ]]; then
+  dir="$BASE/$(date +%F_%H%M)"
+  mkdir -p "$dir"
+fi
+printf '%s' "$dir" > "$STATE"
+out="$dir/$name"
+screencapture -x "$@" "$out"
+echo "$out"
