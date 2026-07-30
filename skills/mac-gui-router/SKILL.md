@@ -112,6 +112,6 @@ displays で配置確認 → System Events で対象アプリを前面化 → �
 
 ## 正本参照（設計根拠・詳細はこちら。本ファイルには手順のみ置く）
 
-- 運用ノート: `~/Documents/vault-main/06_Knowledge/Mac/Claude Code で Mac の GUI を見て操作する（Computer Use 相当）.md`
-- 環境構築（第三者向け）: `~/Documents/vault-main/06_Knowledge/Mac/【セットアップマニュアル】Claude Code に Mac の画面操作をさせる環境構築.md`
+- 運用ノート: `~/Documents/vault-main/04_Knowledge/Mac/Claude Code で Mac の GUI を見て操作する（Computer Use 相当）.md`
+- 環境構築（第三者向け）: `~/Documents/vault-main/04_Knowledge/Mac/【セットアップマニュアル】Claude Code に Mac の画面操作をさせる環境構築.md`
 - 実測比較の記事ドラフト: `~/Documents/vault-main/03_Projects/Content/【Zenn 下書き】Claude Code に Mac アプリを操作させる ─ Computer Use 相当の機能を自作/`

@@ -12,7 +12,7 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OCR="$SCRIPT_DIR/ocr"
-OCR_INDEX_DIR="${OCR_INDEX_DIR:-$HOME/Documents/vault-main/05_Reference/スクショOCR}"
+OCR_INDEX_DIR="${OCR_INDEX_DIR:-$HOME/Documents/vault-main/06_Reference/スクショOCR}"
 
 print_help() {
   cat <<'HELP'
@@ -28,7 +28,7 @@ usage: ocr-images.sh <画像フォルダ> [オプション]
 既定（インデックスノート方式）:
   1 フォルダにつき 1 本の .md を生成する。--out 未指定時の出力先は
   $OCR_INDEX_DIR/<フォルダ名> OCRインデックス.md
-  （既定 $HOME/Documents/vault-main/05_Reference/スクショOCR ─ 環境変数 OCR_INDEX_DIR で変更可）
+  （既定 $HOME/Documents/vault-main/06_Reference/スクショOCR ─ 環境変数 OCR_INDEX_DIR で変更可）
   Obsidian のコア検索は .md しかインデックスしないため、既定はこの方式。
 
 --txt について:

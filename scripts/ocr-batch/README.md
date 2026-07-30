@@ -32,7 +32,7 @@ macOS 実機・Xcode Command Line Tools 必須（Vision / AppKit 依存）。
 ./ocr image.png
 
 # フォルダ一括 → Obsidian 検索に乗る .md インデックスを生成
-#   既定出力先: $OCR_INDEX_DIR（未指定なら $HOME/Documents/vault-main/05_Reference/スクショOCR）
+#   既定出力先: $OCR_INDEX_DIR（未指定なら $HOME/Documents/vault-main/06_Reference/スクショOCR）
 ./ocr-images.sh ~/Downloads/screenshots
 
 # 出力先を明示
