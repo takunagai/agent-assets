@@ -63,7 +63,7 @@ ln -s ~/Projects/agent-assets/agents/explorer.md ~/.claude/agents/explorer.md
 
 ## 返却フォーマット
 
-常に次の 3 セクション構成で返します（共通様式の正本は `~/.claude/rules/agent-output-contract.md`）。
+常に次の 3 セクション構成で返します（共通様式の正本は `~/.claude/rules/delegation.md`）。
 
 ```
 ## 結論

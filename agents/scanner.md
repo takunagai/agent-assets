@@ -18,7 +18,7 @@ tools: Grep, Glob, Bash
 
 ## 返却フォーマット
 
-共通様式の正本: `~/.claude/rules/agent-output-contract.md`（scanner は列挙専任のため簡略版）。
+共通様式の正本: `~/.claude/rules/delegation.md`（scanner は列挙専任のため簡略版）。
 
 ```
 ## 件数

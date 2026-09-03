@@ -18,7 +18,7 @@ multi-file grep・仕様調査・ログ調査・Web リサーチを引き受け�
 
 ## 返却フォーマット
 
-共通様式の正本: `~/.claude/rules/agent-output-contract.md`。
+共通様式の正本: `~/.claude/rules/delegation.md`。
 
 ```
 ## 結論
