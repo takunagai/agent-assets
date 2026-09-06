@@ -1,5 +1,6 @@
 ---
 name: deploy-astro-cloudflare
+disable-model-invocation: true
 description: "Astro 7 + @astrojs/cloudflare v14 構成専用の Cloudflare Workers デプロイスキル。Workers Builds（GitHub 連携）・ローカル wrangler deploy・プレビューデプロイの 3 モード。プリフライト検証（バージョン・wrangler.jsonc・認証）、デプロイ完了確認、ロールバックに対応。『デプロイして』『本番に反映』『Cloudflare にデプロイ』『プレビューにデプロイ』などのリクエストで、対象プロジェクトが Astro のとき発動。Next.js + OpenNext 構成は deploy-nextjs-cloudflare を使用。"
 ---
 

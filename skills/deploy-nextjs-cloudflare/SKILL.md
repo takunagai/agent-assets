@@ -1,5 +1,6 @@
 ---
 name: deploy-nextjs-cloudflare
+disable-model-invocation: true
 description: "Next.js + OpenNext 構成専用の Cloudflare Workers デプロイスキル。OpenNext 公式 CLI（opennextjs-cloudflare deploy / upload）で本番デプロイと Preview URL 発行を自動実行。未コミット変更の処理、ビルド確認、プッシュ、フレームワーク検出・認証確認などのプリフライトを含む。『Next.js をデプロイして』『本番に反映』『Cloudflareにデプロイ』『プレビューにデプロイ』などのリクエストで発動。Astro 構成のデプロイには deploy-astro-cloudflare を使用する。"
 ---
 

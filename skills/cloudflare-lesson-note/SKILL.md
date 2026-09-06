@@ -1,17 +1,6 @@
 ---
 name: cloudflare-lesson-note
-description: |
-  Cloudflare 学習カリキュラムのレッスンノートを Obsidian Vault に保存し、進捗（Dashboard.md）を更新するスキル。
-  会話中の授業内容を、他人が読んでもわかりやすい技術ブログレベルの品質で整形・保存する。
-
-  トリガー条件（Cloudflare 学習セッション中の保存依頼）:
-  - 「ノートを保存して」「レッスンを保存」「メモを残して」
-  - 「今の内容を保存」「ドキュメントにして」
-  - 「ノート保存」「保存して」（Cloudflare 学習セッション中）
-
-  NOT for:
-  - Cloudflare 学習セッション以外の一般的な「保存して」「メモして」（Vault 保存規約や他スキルの領分。学習ノート化ではない）
-  - 授業の実施・カリキュラム進行そのもの（cloudflare-lesson-tutor の領分）。授業は tutor、その成果の保存と進捗記録が本スキル
+description: "Cloudflare 学習カリキュラムのレッスンノートを Obsidian Vault に保存し、進捗（Dashboard.md）を更新する。授業内容を技術ブログ品質で整形・保存。トリガー（Cloudflare 学習セッション中の保存依頼）: 「ノートを保存して」「レッスンを保存」「メモを残して」「今の内容を保存」「ドキュメントにして」「ノート保存」「保存して」。NOT for: 学習セッション外の一般的な「保存して」「メモして」、授業の実施（cloudflare-lesson-tutor）。"
 ---
 
 # Cloudflare Lesson Note スキル

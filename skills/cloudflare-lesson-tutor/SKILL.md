@@ -1,16 +1,6 @@
 ---
 name: cloudflare-lesson-tutor
-description: |
-  Cloudflare 学習カリキュラムの授業を運営するスキル。Dashboard.md で現在地を把握し、CURRICULUM.md の到達目標に沿って、
-  最新の一次情報で裏を取りながら 1 セクションを対話形式で教える。学習 Vault へは読み取りのみ。
-
-  トリガー条件:
-  - 「Cloudflare のレッスンを始めよう」「今日のレッスン」「続きから」「次のセクション」
-  - 「カリキュラムの進捗を見せて」「Cloudflare 学習を再開」「レッスンの続き」
-
-  NOT for:
-  - ノートの保存・進捗の記録（cloudflare-lesson-note の領分。授業は tutor、保存は note）
-  - 学習文脈でない Cloudflare の実開発・デプロイ作業（公式 cloudflare スキル・deploy-astro-cloudflare / deploy-nextjs-cloudflare の領分）
+description: "Cloudflare 学習カリキュラムの授業を運営する。Dashboard.md で現在地を把握し、CURRICULUM.md の到達目標に沿って一次情報で裏を取りながら 1 セクションを対話形式で教える（学習 Vault は読み取りのみ）。トリガー: 「Cloudflare のレッスンを始めよう」「今日のレッスン」「続きから」「次のセクション」「カリキュラムの進捗を見せて」「Cloudflare 学習を再開」「レッスンの続き」。NOT for: ノート保存・進捗記録（cloudflare-lesson-note）、学習文脈でない Cloudflare 実開発・デプロイ。"
 ---
 
 # Cloudflare Lesson Tutor スキル

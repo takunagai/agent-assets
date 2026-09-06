@@ -1,5 +1,6 @@
 ---
 name: cc-fork-delete
+disable-model-invocation: true
 description: |
   Claude Code のフォーク（/branch で作った派生セッション）を、セッション ID(sid) を指定して安全に削除する。
   元セッションは残し、指定したフォーク 1 つだけを対象にする。~/.claude/ 配下の transcript JSONL・

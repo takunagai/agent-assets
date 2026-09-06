@@ -1,6 +1,6 @@
 ---
 name: emdash-cms
-description: "EmDash（Cloudflare 発の TypeScript/Astro ベース CMS、WordPress の精神的後継・MIT）のセットアップ・構成・運用スキル。emdash 0.29 基準。新規サイト作成（pnpm create emdash）・既存 Astro への統合・Cloudflare（D1/R2/KV）と Node/SQLite の設定・コンテンツモデル定義と getEmDashCollection 取得・Portable Text レンダリング・認証（Astro.locals.user）・プラグイン開発（sandboxed / native）・メールとフォーム・WordPress からの移行・MCP サーバー・CLI を扱う。『EmDash をセットアップして』『EmDash でコンテンツタイプを作って』『EmDash プラグインを作って』『WordPress から EmDash に移行して』『EmDash に問い合わせフォームを追加して』などのリクエストで発動。デプロイ実行自体は deploy-astro-cloudflare と連携する。"
+description: "EmDash（Cloudflare 発の TypeScript/Astro ベース CMS、emdash 0.29 基準）のセットアップ・構成・運用。新規作成（pnpm create emdash）、既存 Astro 統合、Cloudflare D1/R2/KV と Node/SQLite、コンテンツモデルと getEmDashCollection、Portable Text、認証、プラグイン開発、メール・フォーム、WordPress 移行、MCP、CLI。トリガー: 『EmDash をセットアップして』『EmDash でコンテンツタイプを作って』『EmDash プラグインを作って』『WordPress から EmDash に移行して』『EmDash に問い合わせフォームを追加して』。デプロイは /deploy-astro-cloudflare を案内する。"
 ---
 
 # EmDash CMS Skill
@@ -9,7 +9,7 @@ description: "EmDash（Cloudflare 発の TypeScript/Astro ベース CMS、WordPr
 
 EmDash は Cloudflare 発の CMS で、WordPress の精神的後継として設計されている。全編 TypeScript・Astro integration として動作し、ライセンスは MIT。管理画面（Portable Text エディタ・スキーマビルダー・メディア管理）と、Astro プロジェクトへのコンテンツ配信を 1 パッケージで担う。
 
-このスキルは次を扱う ─ 新規サイトの作成、既存 Astro プロジェクトへの統合、Cloudflare（D1 / R2 / KV）および Node / SQLite でのデータベース・ストレージ設定、コンテンツモデル定義とクエリ、Portable Text レンダリング、認証、プラグイン開発、メール・フォーム、WordPress 移行、MCP サーバー、CLI。**デプロイの実行自体**は Astro + Cloudflare Workers 構成なので、既存スキル `deploy-astro-cloudflare` と連携する（本スキルは構成まで、デプロイ操作はそちらへ委譲）。
+このスキルは次を扱う ─ 新規サイトの作成、既存 Astro プロジェクトへの統合、Cloudflare（D1 / R2 / KV）および Node / SQLite でのデータベース・ストレージ設定、コンテンツモデル定義とクエリ、Portable Text レンダリング、認証、プラグイン開発、メール・フォーム、WordPress 移行、MCP サーバー、CLI。**デプロイの実行自体**は Astro + Cloudflare Workers 構成なので、既存スキル `deploy-astro-cloudflare` の担当（本スキルは構成まで。同スキルは手動起動専用なので、ユーザーに `/deploy-astro-cloudflare` の起動を案内する）。
 
 > [!important] EmDash は v0.x の早期ベータ ─ 作業開始前に必ず鮮度検証する
 > 本スキルは **emdash 0.29.0（2026-07-10 リリース）/ 2026-07-13 検証**を基準とする。EmDash は v0.x のため API・CLI・設定が数ヶ月単位で大きく変わる。作業を始める前に必ず次を実行し、乖離があれば公式ドキュメントを優先すること。
@@ -353,7 +353,7 @@ claude mcp add --transport http emdash-docs https://docs.emdashcms.com/mcp
 
 ## デプロイ・トラブルシューティング
 
-Cloudflare Workers へのデプロイは Astro + `@astrojs/cloudflare` 構成なので、**デプロイ操作は既存スキル `deploy-astro-cloudflare` に委譲する**（Workers Builds / ローカル wrangler / プレビューの 3 モード、プリフライト、ロールバックを持つ）。EmDash 固有の注意点（D1 マイグレーション適用、`worker_loaders` を含む場合のプラン要件、`src/worker.ts` の PluginBridge エクスポート）は `references/cloudflare-deploy.md` にまとめる。`pnpm exec emdash doctor` での事前診断は SQLite（系統 B）を設定済みの場合のみ有効 ─ テンプレート既定（系統 A）のままでは `data.db` が無くエラーになるので、代わりにローカルの `pnpm build` 成功とプレビューデプロイでの動作確認を事前チェックとする。
+Cloudflare Workers へのデプロイは Astro + `@astrojs/cloudflare` 構成なので、**デプロイ操作は既存スキル `deploy-astro-cloudflare` の担当**（Workers Builds / ローカル wrangler / プレビューの 3 モード、プリフライト、ロールバックを持つ）。同スキルは手動起動専用（`disable-model-invocation: true`）なので、Claude から Skill ツールで呼ばず、ユーザーに `/deploy-astro-cloudflare` の起動を案内する。EmDash 固有の注意点（D1 マイグレーション適用、`worker_loaders` を含む場合のプラン要件、`src/worker.ts` の PluginBridge エクスポート）は `references/cloudflare-deploy.md` にまとめる。`pnpm exec emdash doctor` での事前診断は SQLite（系統 B）を設定済みの場合のみ有効 ─ テンプレート既定（系統 A）のままでは `data.db` が無くエラーになるので、代わりにローカルの `pnpm build` 成功とプレビューデプロイでの動作確認を事前チェックとする。
 
 ## x402（マイクロペイメント）
 

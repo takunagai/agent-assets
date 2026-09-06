@@ -1,5 +1,6 @@
 ---
 name: cc-project-relocate
+disable-model-invocation: true
 description: |
   Claude Code のプロジェクトフォルダを移動・リネームした後に、パスに紐づく状態を新パスへ追随させるスキル。
   ~/.claude/projects/<エンコード済みパス> のセッションログ dir（会話 JSONL・tool-results・memory）を

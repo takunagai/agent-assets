@@ -1,6 +1,6 @@
 ---
 name: wordpress-project-guide
-description: "WordPress 案件の基盤ガイド + 品質ツール一括セットアップ。WPCS（WordPress Coding Standards）準拠のコーディング規約ガイダンスと、WPCS 3.x + PHP_CodeSniffer / PHPStan（phpstan-wordpress）の導入ランブック（レイアウト検出 → 自作コード特定 → composer 導入 → phpstan.neon 生成 → 解析実行 → PhpStorm 設定ナビ）を提供する。トリガー: 「WP セットアップして」「WordPress 案件に品質ツールを入れて」「WPCS を設定」「PHPStan を WordPress に導入」「WordPress の静的解析」、および WordPress プロジェクト（wp-content / wp-config.php を含む）での PHP コーディング規約が問われる場面。JetBrains php-project-guide スキルの汎用 PHP（PSR/PER）ガイダンスは WordPress では適用しない ─ 本スキルが優先。NOT for: Laravel / Symfony（php-project-guide）、テーマ・プラグインの機能開発そのもの、WP サイトのデプロイ。"
+description: "WordPress 案件の基盤ガイド + 品質ツール一括セットアップ。WPCS 準拠の規約ガイダンスと、WPCS 3.x + PHP_CodeSniffer / PHPStan（phpstan-wordpress）の導入ランブック。トリガー: 「WP セットアップして」「WordPress 案件に品質ツールを入れて」「WPCS を設定」「PHPStan を WordPress に導入」「WordPress の静的解析」、および wp-content / wp-config.php を含むプロジェクトで PHP 規約が問われる場面（php-project-guide の PSR より本スキル優先）。NOT for: Laravel / Symfony、テーマ・プラグインの機能開発、デプロイ。"
 ---
 
 # WordPress Project Guide

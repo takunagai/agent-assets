@@ -1,5 +1,6 @@
 ---
 name: handover-scaffold
+disable-model-invocation: true
 description: 別セッションで無人実行させる「指示書（引き継ぎドキュメント）」の骨組みを一発生成するスキル。handover/ バッチのフォルダ・00_実行順.md マニフェスト・指示書スケルトンを規約どおりに作る。トリガー「指示書を作って」「handover 作成」「引き継ぎドキュメントを作って」「バッチ指示書を用意して」で発動する。
 ---
 
