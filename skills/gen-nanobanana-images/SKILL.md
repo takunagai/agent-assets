@@ -1,6 +1,6 @@
 ---
 name: gen-nanobanana-images
-description: "Generate and edit images with Google Gemini image models (Nano Banana series): text-to-image, image editing, multi-turn refinement. Models: Flash2 (balanced), Pro (4K / best text accuracy), Lite (fast 1K draft). Use for AI image generation from text, editing existing images, iterative refinement, text rendering in images, or infographics with Gemini."
+description: "Generate and edit images with Google Gemini image models (Nano Banana series): text-to-image, image editing, multi-turn refinement. Models: Flash2 (balanced), Pro (4K / best text accuracy), Lite (fast 1K draft). Use when the user names Gemini / Nano Banana, or needs infographics and multi-turn edits with Gemini. NOT for: requests naming GPT Image 2 / ChatGPT, and generic \"generate an image\" requests with no model specified (both go to gpt-image-2)."
 ---
 
 # Nano Banana Image Generation
