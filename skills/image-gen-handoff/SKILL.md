@@ -1,6 +1,6 @@
 ---
 name: image-gen-handoff
-description: "Create durable handoff artifacts after Codex image_gen or GPT Image 2 batch generation: audit saved images, extract final prompts from Codex session JSONL, pair images with prompts, build manifest JSON/Markdown, validate sha256 / dimensions / missing prompts / duplicate hashes, optionally extract unsaved JSONL images or archive JSONL. Never moves images or deletes JSONL by default."
+description: "Create handoff artifacts after Codex image_gen or GPT Image 2 batch generation: audit saved images, extract final prompts from Codex session JSONL, pair images with prompts, build a manifest (JSON/Markdown), validate sha256 / dimensions / missing prompts / duplicates, optionally extract unsaved JSONL images or archive JSONL. Never moves images or deletes JSONL by default."
 ---
 
 # Image Gen Handoff
