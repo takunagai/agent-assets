@@ -26,6 +26,17 @@ idle ──pointerdown──→ charging ──pointerup──→ releasing ─�
 短いクリック/タップ（保持時間が閾値未満）は `charging` を経由せず「pop」の軽量パスに
 分岐させる ─ 溜め演出を経ない小さな反応として、`triggerPop` のような別関数に切り出す。
 
+**拡張（参照実装の Phase 9-1）**: 解放に「来るぞ」という間を作り、着弾を音楽の拍に揃えるなら、
+`releasing` を `inhale → impact` の 2 状態に分ける。`audio.release()` が着弾までの秒数を返し、
+`inhale` はその時刻まで粒子を吸い込ませて待ち、`impact` でヒットストップ（`timeScale` を
+落とし、摩擦は `FRICTION ** timeScale`）を掛けてから `decay` へ抜ける。
+
+```
+idle ──pointerdown──→ charging ──pointerup──→ inhale ──着弾時刻──→ impact ──ヒットストップ──→ decay ──→ idle
+```
+
+詳細と他の演出は `references/game-feel.md`。
+
 ## 2. ポインタ統合（マウス/タッチの一本化）
 
 - Pointer Events（`pointerdown` / `pointermove` / `pointerup` / `pointercancel`）で
@@ -64,11 +75,22 @@ idle ──pointerdown──→ charging ──pointerup──→ releasing ─�
 最初の操作を「音を起動するためのゲート」と「1 回目の操作」を同時に兼ねさせると、
 ユーザーから見て余計なクリックが増えない。
 
-- 全画面オーバーレイ（「タップして始める」等）を用意し、その `pointerdown` だけを
-  拾って `audio.start()`（内部で `AudioContext.resume()`）を呼ぶ。
-- `start()` の Promise が解決してから、そのまま同じ座標で 1 回目の
+- 全画面オーバーレイ（「タップして始める」等）を用意し、その `pointerdown` で
+  `audio.start()` を呼ぶ。
+- **タッチでは `pointerdown` で音声を解錠できない**（HTML の user activation はタッチだと
+  `pointerup` / `touchend` から）。`start()` は `resume()` を待たずに配線だけ済ませ、
+  エンジン側で `pointerup` / `touchend` / `click` / `keydown` のたびに止まっていれば
+  `resume()` する常駐リスナーを置く（`audio-engine-skeleton.ts` の `installUnlockListeners()`）。
+  `pointerdown` で `resume()` の解決を待つ作りにすると、スマホでは永久に無音になる。
+- `start()` の Promise が解決（または失敗）したら、そのまま同じ座標で 1 回目の
   `handlePointerDown` を呼び、charging 状態に入る（ユーザーの最初のジェスチャーを
-  無駄にしない）。
+  無駄にしない）。`start()` の失敗は `catch` し、音が出なくても描画は続ける。
+- 起動を待つ間に指が離れていたら（`pointerup` を `{ once: true }` で見張る）、溜めでなく
+  タップとして扱う。離し済みのまま charging に入ると、次のタップまで抜けられない。
+- iOS の「振って解放」等のモーションセンサー許可（`DeviceMotionEvent.requestPermission()`）も
+  ユーザー操作の中でしか通らない。タッチは `touchend` で要求する。http では
+  `DeviceMotionEvent` 自体が存在しないので `typeof` で守り、音声の起動より後に置く
+  （ここで例外が出ても音声の起動を巻き込まないため）。
 - オーバーレイは即座に消さず、トランジション時間だけ待ってから DOM から除去する
   （フェードアウト等の演出を切れさせないため）。
 

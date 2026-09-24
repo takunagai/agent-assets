@@ -34,13 +34,22 @@ export class ArtworkAudioEngine implements AudioEngine {
   private noiseBuf!: AudioBuffer; // 使い回すホワイトノイズ（インパクト系の音に）
   private tanhCurve!: Float32Array<ArrayBuffer>; // ソフトクリップ用カーブ（WaveShaperNode.curve に使う）
 
+  // 配線と素材の準備まで完了したか。ctx の有無では判定しない ─ resume() が解決しない環境
+  // （ユーザー操作なしのヘッドレス等）で未配線のノードへ connect して例外になり、描画ループごと止まるため
+  private isReady = false;
+
+  // resume() は待たない。タッチ端末では pointerdown が「ユーザー操作」に数えられず（HTML の
+  // user activation はタッチだと pointerup / touchend から）、ゲートの pointerdown で resume() を
+  // 待つとスマホでは永久に無音になる。配線は先に済ませ、再開は installUnlockListeners() に任せる
   async start(): Promise<void> {
     if (this.ctx) {
-      await this.ctx.resume();
+      void this.ctx.resume();
       return;
     }
+    usePlaybackAudioSession();
     this.ctx = new AudioContext();
-    await this.ctx.resume();
+    void this.ctx.resume();
+    this.installUnlockListeners();
 
     // ---- master: fxIn → [dry, convolver reverb] → limiter → destination ----
     this.fxIn = this.ctx.createGain();
@@ -75,11 +84,42 @@ export class ArtworkAudioEngine implements AudioEngine {
     this.noiseBuf = this.buildNoiseBuffer(2.0);
     this.tanhCurve = this.buildTanhCurve(2048);
     this.buildPluckBank(); // KS プラックが要らない作品はこの行と pluckBank 系を削除してよい
+    this.isReady = true;
 
     // ---- パターン層（Strudel・オプショナル）─ 失敗しても本体は動く ----
-    // 要らなければこのブロックごと削除する。使う場合は pattern-skeleton.ts を参照
+    // 要らなければこのブロックごと削除する。使う場合は pattern-skeleton.ts を参照。
+    // 音声が実際に動き出してから起動する（停止中の ctx では Strudel の初期化が進まない）
     // const { startPatternLayer } = await import("./pattern");
-    // void startPatternLayer(this.ctx);
+    // void this.whenRunning().then(() => startPatternLayer(this.ctx));
+  }
+
+  // 指を離した・タップ・キー操作のたびに、止まっていれば再開する。
+  // iOS は着信やバックグラウンド復帰で止まるので、外さずに常駐させる（判定だけの軽い処理）
+  private installUnlockListeners(): void {
+    const unlock = () => {
+      if (this.ctx.state !== "running") {
+        this.ctx.resume().catch((error: unknown) => {
+          console.warn("[audio] resume に失敗", { error: String(error) });
+        });
+      }
+    };
+    for (const type of ["pointerup", "touchend", "click", "keydown"]) {
+      document.addEventListener(type, unlock, { capture: true, passive: true });
+    }
+  }
+
+  // ctx が running になったら解決する。パターン層の起動に使う（start() 末尾のコメント参照）。
+  // private にすると、パターン層を使わない作品で noUnusedLocals に掛かるため公開のままにする
+  whenRunning(): Promise<void> {
+    if (this.ctx.state === "running") return Promise.resolve();
+    return new Promise((resolve) => {
+      const onChange = () => {
+        if (this.ctx.state !== "running") return;
+        this.ctx.removeEventListener("statechange", onChange);
+        resolve();
+      };
+      this.ctx.addEventListener("statechange", onChange);
+    });
   }
 
   // ============ ここに作品の音を実装 ============
@@ -90,19 +130,19 @@ export class ArtworkAudioEngine implements AudioEngine {
   // 下記は KS プラックバンクだけを使った最小の動作例。
 
   chargeStart(_x: number, _y: number): void {
-    if (!this.ctx) return;
+    if (!this.isReady) return;
     // 例: 継続的に鳴る音（オシレーター等）をここで起動する
   }
 
   chargeLevel(level: number): void {
-    if (!this.ctx) return;
+    if (!this.isReady) return;
     const l = Math.min(Math.max(level, 0), 1);
     controlSignals.charge = l;
     // 例: 起動済みの継続音の周波数・音量・フィルタを l に追従させる
   }
 
   release(level: number, x: number, _y: number): void {
-    if (!this.ctx) return;
+    if (!this.isReady) return;
     const l = Math.min(Math.max(level, 0), 1);
     controlSignals.charge = 0;
     controlSignals.energy = 1;
@@ -111,7 +151,7 @@ export class ArtworkAudioEngine implements AudioEngine {
   }
 
   pop(x: number, _y: number): void {
-    if (!this.ctx) return;
+    if (!this.isReady) return;
     // 短いクリック/タップ用の軽い一発（KS プラックバンクの例）
     this.pluck(880, 0.3, (x * 2 - 1) * 0.6, 0.28);
   }
@@ -244,4 +284,14 @@ export class ArtworkAudioEngine implements AudioEngine {
     }
     return curve;
   }
+}
+
+// iOS の消音スイッチがオンでも鳴らす（Safari 16.4+ の Audio Session API。非対応なら何もしない）。
+// "playback" のままだと iOS はマイクの取得を拒否する ─ マイクを使う作品は、使う間だけ
+// "play-and-record" に切り替えて、やめたら "playback" に戻す
+function usePlaybackAudioSession(): boolean {
+  const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+  if (!session) return false;
+  session.type = "playback";
+  return true;
 }
