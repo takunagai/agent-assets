@@ -1,9 +1,9 @@
 # 状態機械・ポインタ統合・性能自動調整・ゲート処理 ─ 設計ノート
 
 p5.js インスタンスモードで「溜めて解放する」系のインタラクティブアートを書くときの
-`main.ts`（スケッチ本体）の型を、抽出元の CatharsisField 実装から一般化してまとめる。
+`main.ts`（スケッチ本体）の型を、抽出元の Heartburst（旧称 CatharsisField）実装から一般化してまとめる。
 コードそのものはここに複製しない ─ 実装の参照先は
-`/Users/takna/Projects/visual-art/web/src/main.ts`（本スキルの抽出元。実際にこの
+`/Users/takna/Projects/Game/heartburst/web/src/main.ts`（本スキルの抽出元。実際にこの
 パスにアクセスできる環境なら、迷ったらまずこれを読む）。
 
 ## 1. 状態機械（4 状態）

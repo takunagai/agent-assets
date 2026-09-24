@@ -1,6 +1,6 @@
 # stack-web.md ─ p5.js + Web Audio + Strudel 実装ガイド
 
-ウェブ版の実装ガイド。参照実装: `~/Projects/visual-art`（`web/src/**`）。計画正本: `docs/web-port-plan.md`。ネイティブ版（`stack-native.md`）の 1:1 移植であり、OSC は廃止して同一ページ内の関数呼び出しに置き換える。
+ウェブ版の実装ガイド。参照実装: `~/Projects/Game/heartburst`（`web/src/**`）。計画正本: `docs/web-port-plan.md`。ネイティブ版（`stack-native.md`）の 1:1 移植であり、OSC は廃止して同一ページ内の関数呼び出しに置き換える。
 
 ## 構成
 
@@ -10,13 +10,13 @@ main.ts（状態機械・ポインタ入力・p5 インスタンスモード）
   ├─ visuals.ts        （Particle / Shockwave / buildVignette。p5 描画）
   └─ audio/
       ├─ engine.ts      （AudioEngine 契約 + createAudioEngine ファクトリ）
-      ├─ catharsis-engine.ts（Web Audio 実装。sc/main.scd の写像）
+      ├─ heartburst-engine.ts（Web Audio 実装。sc/main.scd の写像）
       └─ pattern.ts      （Strudel パターン層。オプショナル）
 ```
 
-- **AudioEngine 契約**（`web/src/audio/engine.ts:9-17`）: `start / chargeStart / chargeLevel / release / pop / setEnergy / getAmp` の7メソッドのみで視覚と音響を分離する。`main.ts` はこのインターフェース越しにしか音響を触らない（差し替え時に main.ts を変更しないため）。`?mute` クエリで `NoopAudioEngine` に切り替え可能（`engine.ts:34-39`）─ 視覚のみのスモークテストに使える
-- **エンジン**（`catharsis-engine.ts`）: `fxIn`（全音源の合流点、SC の `~fxBus` 相当）→ dry/wet 分岐 → `ConvolverNode`（生成インパルス応答のリバーブ、外部 IR ファイル不要）→ `DynamicsCompressor`（Limiter 代用）→ `AnalyserNode` → `destination`。`start()` 内で KS プラック20音をオフライン合成してバンク化する（`catharsis-engine.ts:82-90`）
-- **パターン層**（`pattern.ts`）: `@strudel/web` を動的 import（クリックゲート後に初めてロード）。`setAudioContext(ctx)` で音響エンジンと同一 `AudioContext` を共有し、`controlSignals`（`catharsis-engine.ts:26`）を `globalThis.__catharsis` 経由で `signal(() => __catharsis.charge)` として注入する（`pattern.ts:10-22,43-45`）。失敗しても本体（視覚+音響）は継続する設計（`pattern.ts:24-27`）
+- **AudioEngine 契約**（`web/src/audio/engine.ts:34-56`）: `start / chargeStart / chargeLevel / release / pop / setEnergy / getAmp` の7メソッドのみで視覚と音響を分離する。`main.ts` はこのインターフェース越しにしか音響を触らない（差し替え時に main.ts を変更しないため）。`?mute` クエリで `NoopAudioEngine` に切り替え可能（`engine.ts:111-116`）─ 視覚のみのスモークテストに使える
+- **エンジン**（`heartburst-engine.ts`）: `fxIn`（全音源の合流点、SC の `~fxBus` 相当）→ dry/wet 分岐 → `ConvolverNode`（生成インパルス応答のリバーブ、外部 IR ファイル不要）→ `DynamicsCompressor`（Limiter 代用）→ `AnalyserNode` → `destination`。`start()` 内で KS プラック20音をオフライン合成してバンク化する（`heartburst-engine.ts:236-251`）
+- **パターン層**（`pattern.ts`）: `@strudel/web` を動的 import（クリックゲート後に初めてロード）。`setAudioContext(ctx)` で音響エンジンと同一 `AudioContext` を共有し、`controlSignals`（`heartburst-engine.ts:121`）を `globalThis.__heartburst` 経由で `signal(() => __heartburst.charge)` として注入する（`pattern.ts:10,33-48,95-97`）。失敗しても本体（視覚+音響）は継続する設計（`pattern.ts:61-64`）
 
 ## 実装順序（`docs/web-port-plan.md` フェーズ計画に対応）
 
@@ -30,13 +30,13 @@ Phase 1-2 は並行実装可能（AudioEngine 契約で視覚と音響が分離�
 
 ## ウェブ固有の落とし穴（詳細な症状/原因/対処は pitfalls.md 参照）
 
-- **p5 v2 の FES 偽陽性**: HSB 4引数 `stroke()` を誤検知し fps を殺す → `p5.disableFriendlyErrors = true` を本番必須に（`main.ts:19-21`）
-- **pixelDensity(1) は createCanvas の後**: p5 v2 では前に呼ぶと無効。`canvas.width` の実測で検証する（`main.ts:341-342`）
-- **DelayNode フィードバックループは最小128サンプル**: 高音域の Karplus-Strong が組めない → 起動時にオフライン合成して `AudioBuffer` バンク化（`catharsis-engine.ts:267-285`）
-- **p5.noise はネイティブより桁違いに遅い**: 粒子ごとに4フレームに1回の再計算（スロット分散）+ lerp 平滑化（`visuals.ts:130,145-148`）
-- **getAmp（analyser 読み出し）の巻き上げ**: 粒子ループの外、フレームあたり1回に集約する（`main.ts:411`、`catharsis-engine.ts:325`）
-- **Strudel worklet は initAudioOnFirstClick では間に合わない**: ゲートのクリックは消費済み。ユーザー操作後なら `initAudio()` を明示 await（`pattern.ts:18-20`）
-- **autoplay ゲート**: 初回ユーザー操作まで音が出せない制約を導入演出に変換する。オーバーレイの初回 `pointerdown` で `AudioContext.resume()` → そのまま1回目のチャージへ繋げる（`main.ts:304-323`）
+- **p5 v2 の FES 偽陽性**: HSB 4引数 `stroke()` を誤検知し fps を殺す → `p5.disableFriendlyErrors = true` を本番必須に（`main.ts:38-40`）
+- **pixelDensity(1) は createCanvas の後**: p5 v2 では前に呼ぶと無効。`canvas.width` の実測で検証する（`main.ts:1519-1520`）
+- **DelayNode フィードバックループは最小128サンプル**: 高音域の Karplus-Strong が組めない → 起動時にオフライン合成して `AudioBuffer` バンク化（`heartburst-engine.ts:1020-1061`）
+- **p5.noise はネイティブより桁違いに遅い**: 粒子ごとに4フレームに1回の再計算（スロット分散）+ lerp 平滑化（`visuals.ts:302,317-320`）
+- **getAmp（analyser 読み出し）の巻き上げ**: 粒子ループの外、フレームあたり1回に集約する（`main.ts:1654`、`heartburst-engine.ts:1101`）
+- **Strudel worklet は initAudioOnFirstClick では間に合わない**: ゲートのクリックは消費済み。ユーザー操作後なら `initAudio()` を明示 await（`pattern.ts:44-46`）
+- **autoplay ゲート**: 初回ユーザー操作まで音が出せない制約を導入演出に変換する。オーバーレイの初回 `pointerdown` で `AudioContext.resume()` → そのまま1回目のチャージへ繋げる（`main.ts:1028-1062`）
 - **AGPLv3（Strudel のライセンス）**: 組込側もソース公開必須。公開計画の質問時に自動で告知し、ユーザー承認を実装前に取る（`web/LICENSE`、`docs/web-port-plan.md:62-66`）
 
 ## Strudel 固有の技術メモ（`docs/web-port-plan.md` 裏取り結果）
@@ -47,7 +47,7 @@ Phase 1-2 は並行実装可能（AudioEngine 契約で視覚と音響が分離�
 
 ## パフォーマンス自動調整（Phase 4・委譲時の仕様化ポイント）
 
-粒子数自動調整は「fps 低下」と「フレーム間隔の変動係数」の両方で判定する（`main.ts:163-211`、`tuning.ts:69-73`）。macOS/Chrome の省エネモードによる rAF 30Hz 制限を実負荷と誤認しないための二重基準（詳細は `verification.md`・`pitfalls.md` の fps 判別の罠を参照）。サブエージェントに委譲する際はこの判定ロジックの落とし穴を仕様に明記しておくと手戻りを防げる。
+粒子数自動調整は「fps 低下」と「フレーム間隔の変動係数」の両方で判定する（`main.ts:448-496`、`tuning.ts:159-163`）。macOS/Chrome の省エネモードによる rAF 30Hz 制限を実負荷と誤認しないための二重基準（詳細は `verification.md`・`pitfalls.md` の fps 判別の罠を参照）。サブエージェントに委譲する際はこの判定ロジックの落とし穴を仕様に明記しておくと手戻りを防げる。
 
 ## 参照実装への誘導
 

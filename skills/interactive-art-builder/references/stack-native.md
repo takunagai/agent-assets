@@ -1,6 +1,6 @@
 # stack-native.md ─ SuperCollider + Processing + Tidal 実装ガイド
 
-ネイティブ版の実装ガイド。参照実装: `~/Projects/visual-art`（sc/main.scd, processing/CatharsisField/*.pde, bin/start.sh, bin/test-osc.scd）。
+ネイティブ版の実装ガイド。参照実装: `~/Projects/Game/heartburst`（sc/main.scd, processing/Heartburst/*.pde, bin/start.sh, bin/test-osc.scd）。
 
 ## 構成
 
@@ -36,9 +36,9 @@ Processing ──OSC :6010──→ Tidal Cycles (ghci, パターン層)
 - OSCdef 群（`sc/main.scd:113-163`）: 受信メッセージへの反応のみを書く。判断ロジック（状態遷移）は持たせない
 - SuperDirt はクラス存在ガード付きで起動（`sc/main.scd:169-179`）。詳細は下記「落とし穴」参照
 
-### Processing（`processing/CatharsisField/`）
+### Processing（`processing/Heartburst/`）
 
-- `CatharsisField.pde` ─ メインスケッチ。状態機械（idle/charging/releasing/decay）・入力ハンドラ（`mousePressed`/`mouseDragged`/`mouseReleased`）・OSC 送信トリガーの主管。チューニング定数を冒頭に一元集約
+- `Heartburst.pde` ─ メインスケッチ。状態機械（idle/charging/releasing/decay）・入力ハンドラ（`mousePressed`/`mouseDragged`/`mouseReleased`）・OSC 送信トリガーの主管。チューニング定数を冒頭に一元集約
 - `OscBridge.pde` ─ OSC 送受信の集約クラス。送信は SC 向け（`/charge/*`, `/release`, `/pop`）と Tidal 向け（`/ctrl "key" value`）を分離。受信（`/sc/amp`）は生値を保持し `updateSmoothing()` で毎フレーム lerp 平滑化、`getAmp()` で描画側へ渡す。送信失敗（受信側未起動）で例外を投げてスケッチを落とさないよう try-catch で握りつぶす
 - `Particle.pde` ─ 粒子 1 個の状態。色は HSB 分解までコンストラクタで済ませ、`display()` では毎フレーム再計算しない（不変値のキャッシュ）
 - `Shockwave.pde` ─ 衝撃波リング。配列使い回し（非活性個体を再利用、毎フレーム生成しない）

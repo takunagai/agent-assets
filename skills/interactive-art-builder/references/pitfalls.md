@@ -1,44 +1,44 @@
 # pitfalls.md ─ 統合知識ベース
 
-CatharsisField 制作工程（`docs/skill-plan.md` 5節・`docs/process-log.md` 全フェーズ）で実証済みの落とし穴。同じ罠に二度ハマらないための一覧。各項目は「症状 → 原因 → 対処」の3点セット。
+Heartburst（旧称 CatharsisField）制作工程（`docs/skill-plan.md` 5節・`docs/process-log.md` 全フェーズ）で実証済みの落とし穴。同じ罠に二度ハマらないための一覧。各項目は「症状 → 原因 → 対処」の3点セット。
 
 ## Processing / p5
 
 ### colorMode のレンジは alpha にも効く
 
 - **症状**: 加算合成の粒子・フラッシュ・衝撃波が背景の灰色浮き・白飛び・マゼンタ不明瞭を起こす
-- **原因**: `colorMode(HSB, 360, 100, 100, 100)`（`processing/CatharsisField/CatharsisField.pde:118`）でレンジを 100 に指定しているのに、alpha 値を 255 前提（45〜230）で書いていた → 100 で頭打ち＝ほぼ不透明のまま加算合成が蓄積する
-- **対処**: colorMode のレンジ指定と描画時の alpha 値を必ず突き合わせて検査する。alpha を 100 レンジに再設計し、トレイルのフェードを強める（例: `flashAlpha = 100`、`processing/CatharsisField/CatharsisField.pde:336`）。サブエージェント成果物の頻出バグポイントなので統合時に必ずチェックする
+- **原因**: `colorMode(HSB, 360, 100, 100, 100)`（`processing/Heartburst/Heartburst.pde:118`）でレンジを 100 に指定しているのに、alpha 値を 255 前提（45〜230）で書いていた → 100 で頭打ち＝ほぼ不透明のまま加算合成が蓄積する
+- **対処**: colorMode のレンジ指定と描画時の alpha 値を必ず突き合わせて検査する。alpha を 100 レンジに再設計し、トレイルのフェードを強める（例: `flashAlpha = 100`、`processing/Heartburst/Heartburst.pde:336`）。サブエージェント成果物の頻出バグポイントなので統合時に必ずチェックする
 
 ### p5 v2 の FES（Friendly Error System）が偽陽性で fps を殺す
 
 - **症状**: HSB 4引数の `stroke()` を「Invalid input」と誤検知し、毎フレーム数千件のログが出て最大のボトルネックになる
-- **原因**: p5 v2 の入力検証が誤検知する（`web/src/main.ts:21` 付近）
-- **対処**: 本番ビルドで `p5.disableFriendlyErrors = true` を必須にする（`(p5 as unknown as {...}).disableFriendlyErrors = true`、`web/src/main.ts:21`）
+- **原因**: p5 v2 の入力検証が誤検知する（`web/src/main.ts:40` 付近）
+- **対処**: 本番ビルドで `p5.disableFriendlyErrors = true` を必須にする（`(p5 as unknown as {...}).disableFriendlyErrors = true`、`web/src/main.ts:40`）
 
 ### pixelDensity(1) は createCanvas の後でないと効かない
 
 - **症状**: retina 環境で描画が重く、解放時にアニメーションが停止・スローモーション化する
 - **原因**: retina の既定 pixelDensity(2) は 3024x1964 で約2380万ピクセル/フレームの描画になる。p5 v2 では `pixelDensity(1)` を `createCanvas` の**前**に呼ぶと無効
-- **対処**: `createCanvas` の後に呼ぶ（ネイティブ Processing: `processing/CatharsisField/CatharsisField.pde:114`。ウェブ p5: `web/src/main.ts:341-342`、`p.createCanvas(...)` の直後に `p.pixelDensity(1)`）。検証は `canvas.width` の実測で行う
+- **対処**: `createCanvas` の後に呼ぶ（ネイティブ Processing: `processing/Heartburst/Heartburst.pde:114`。ウェブ p5: `web/src/main.ts:1519-1520`、`p.createCanvas(...)` の直後に `p.pixelDensity(1)`）。検証は `canvas.width` の実測で行う
 
 ### p5.noise はネイティブ Processing の noise() より桁違いに遅い
 
 - **症状**: 4000粒子×60fps で idle が 30fps に落ちる
-- **原因**: p5.js（ウェブ版）の `noise()` 実装がネイティブより大幅に重い（`web/src/visuals.ts:130` 付近にコメントあり）
-- **対処**: 粒子ごとに4フレームに1回の再計算（スロット分散）+ lerp 平滑化で視覚品質を保ったまま計算量を1/4に削減する（`web/src/visuals.ts:145-148` 付近）
+- **原因**: p5.js（ウェブ版）の `noise()` 実装がネイティブより大幅に重い（`web/src/visuals.ts:302` 付近にコメントあり）
+- **対処**: 粒子ごとに4フレームに1回の再計算（スロット分散）+ lerp 平滑化で視覚品質を保ったまま計算量を1/4に削減する（`web/src/visuals.ts:317-320` 付近）
 
 ### ループ不変値の巻き上げ（色キャッシュ・getAmp）
 
 - **症状**: 粒子ごとに毎フレーム同じ値を再計算・再取得している（例: analyser 読み出しを粒子ごと4000回呼んでいた）
 - **原因**: ループ不変値をループ内に置いている（/simplify の指摘パターンの再発）
-- **対処**: `getAmp()` の呼び出しをフレームあたり1回に巻き上げる（`web/src/main.ts:411`、コメント「analyser 読み出しは1フレーム1回」）。契約：ループ不変値はループ外へ。Particle の色も HSB 分解をコンストラクタで済ませ `display()` では再計算しない
+- **対処**: `getAmp()` の呼び出しをフレームあたり1回に巻き上げる（`web/src/main.ts:1654`、コメント「analyser 読み出しは1フレーム1回」）。契約：ループ不変値はループ外へ。Particle の色も HSB 分解をコンストラクタで済ませ `display()` では再計算しない
 
 ### stroke 状態の描画間漏れ（点描画への切り替え時）
 
 - **症状**: 粒子を `ellipse()` から `stroke + strokeWeight + point()`（GLポイントスプライト、P2D で軽量）へ変更した際、トレイル矩形やフラッシュなど後続の `rect`/`fill` 描画に stroke が意図せず残る
 - **原因**: `stroke`/`strokeWeight` はグローバル描画状態であり、`point()` 呼び出し後もクリアされない
-- **対処**: トレイル矩形・フラッシュの直前に `noStroke()` を明示する（`processing/CatharsisField/CatharsisField.pde:121, 171, 212`）。粒子の点描画自体は `Particle.pde:150-151`
+- **対処**: トレイル矩形・フラッシュの直前に `noStroke()` を明示する（`processing/Heartburst/Heartburst.pde:121, 171, 212`）。粒子の点描画自体は `Particle.pde:150-151`
 
 ### Processing cli の JVM 孤児化
 
@@ -52,23 +52,23 @@ CatharsisField 制作工程（`docs/skill-plan.md` 5節・`docs/process-log.md` 
 
 - **症状**: 約344Hz超の Karplus-Strong プラック音が物理的に組めない（ペンタトニック音列がほぼ全滅）＋ループ内 BiquadFilter が不安定警告を出す
 - **原因**: Web Audio の DelayNode フィードバックループの最小遅延が128サンプルという制約がある
-- **対処**: KS 合成はリアルタイムのフィードバックループで組まず、起動時に JS で**オフライン合成**して `AudioBuffer` バンク化する（`web/src/audio/catharsis-engine.ts:267-285`、`renderKarplusStrong()`）。音程が正確になり再生コストも極小、警告も根絶できる
+- **対処**: KS 合成はリアルタイムのフィードバックループで組まず、起動時に JS で**オフライン合成**して `AudioBuffer` バンク化する（`web/src/audio/heartburst-engine.ts:1020-1061`、`renderKarplusStrong()`）。音程が正確になり再生コストも極小、警告も根絶できる
 
 ### analyser 読み出し（getAmp）の巻き上げ
 
-- 上記「Processing/p5」節の「ループ不変値の巻き上げ」と同一事象・同一対処（`web/src/audio/catharsis-engine.ts:325`, `web/src/main.ts:411`）。契約はプラットフォーム共通
+- 上記「Processing/p5」節の「ループ不変値の巻き上げ」と同一事象・同一対処（`web/src/audio/heartburst-engine.ts:1101`, `web/src/main.ts:1654`）。契約はプラットフォーム共通
 
 ### Strudel worklet の initAudio タイミング
 
 - **症状**: `initAudioOnFirstClick()` を使うと AudioWorkletNode エラーが出続ける
 - **原因**: ゲートのクリックは既に消費済みのため、`initAudioOnFirstClick` は「次のクリック」を待ち続けてしまい間に合わない
-- **対処**: ユーザー操作後であれば `initAudio()` を明示的に await する（`web/src/audio/pattern.ts:18-20`）
+- **対処**: ユーザー操作後であれば `initAudio()` を明示的に await する（`web/src/audio/pattern.ts:44-46`）
 
 ### autoplay ゲート
 
 - **症状**: ブラウザの autoplay policy により、初回ユーザー操作前は音が出せない
 - **原因**: ブラウザ標準の autoplay 制約
-- **対処**: 制約を演出に変換する。「画面に触れて、溜めて、解放する」の導入オーバーレイを用意し、初回 `pointerdown` で `AudioContext.resume()` を行いつつそのまま1回目の溜めに繋げる（`web/src/main.ts:304-323`）
+- **対処**: 制約を演出に変換する。「画面に触れて、溜めて、解放する」の導入オーバーレイを用意し、初回 `pointerdown` で `AudioContext.resume()` を行いつつそのまま1回目の溜めに繋げる（`web/src/main.ts:1028-1062`）
 
 ## SuperCollider
 
@@ -134,4 +134,4 @@ CatharsisField 制作工程（`docs/skill-plan.md` 5節・`docs/process-log.md` 
 
 - **症状**: パターン層に Strudel（`@strudel/web`）を組み込むと、作品全体のライセンス方針に波及する
 - **原因**: Strudel は AGPLv3（組込側もソース公開必須、SaaS 条項あり）
-- **対処**: 公開計画をユーザーに質問する段階で自動的に告知する。CatharsisField では「web/ を AGPLv3 でソース公開して Strudel を続行」を実装前にユーザー承認で確定した（`web/LICENSE`）。ソース非公開が必須の案件では Strudel を使わない選択肢も提示する
+- **対処**: 公開計画をユーザーに質問する段階で自動的に告知する。Heartburst では「web/ を AGPLv3 でソース公開して Strudel を続行」を実装前にユーザー承認で確定した（`web/LICENSE`）。ソース非公開が必須の案件では Strudel を使わない選択肢も提示する

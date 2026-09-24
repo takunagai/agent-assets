@@ -84,7 +84,7 @@ export class ArtworkAudioEngine implements AudioEngine {
 
   // ============ ここに作品の音を実装 ============
   //
-  // 元実装（CatharsisField）では chargeStart/chargeLevel で溜めドローンを
+  // 元実装（Heartburst）では chargeStart/chargeLevel で溜めドローンを
   // 起動・追従させ、release で複数の音源（ドロップ・衝撃波・シャワー）を
   // 一斉発火していた。ジェスチャーの意味に合わせて書き換える。
   // 下記は KS プラックバンクだけを使った最小の動作例。

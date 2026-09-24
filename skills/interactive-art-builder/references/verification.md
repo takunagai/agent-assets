@@ -1,6 +1,6 @@
 # 検証ハーネス
 
-「動いた気がする」を禁止する（`docs/skill-plan.md` 設計原則 5）。すべての検証は数値・ログ・画像データという再現可能な証拠を残す。CatharsisField では Phase 5〜7（`docs/process-log.md`）で以下の手法を実測している。
+「動いた気がする」を禁止する（`docs/skill-plan.md` 設計原則 5）。すべての検証は数値・ログ・画像データという再現可能な証拠を残す。Heartburst（旧称 CatharsisField）では Phase 5〜7（`docs/process-log.md`）で以下の手法を実測している。
 
 ## 1. chrome-devtools MCP での PointerEvent 合成 E2E
 
@@ -11,11 +11,11 @@
 構造:
 
 1. `mcp__chrome-devtools__navigate_page` でページを開く
-2. 初回操作は**導入オーバーレイのゲート**を経由する。`#overlay` 要素への `pointerdown` が `AudioContext` 起動を兼ねる（`web/src/main.ts:308-323`）。`mcp__chrome-devtools__evaluate_script` でこの要素に対して合成 `PointerEvent` を dispatch するか、`mcp__chrome-devtools__click` で直接クリックする
-3. 以降の操作は canvas 要素（`sketch-container` 配下、`web/src/main.ts:363-364,371-378`）に対する `pointerdown` → 一定時間の `pointermove` なし待機（charging） → `pointerup`（release）のシーケンスを合成する
+2. 初回操作は**導入オーバーレイのゲート**を経由する。`#overlay` 要素への `pointerdown` が `AudioContext` 起動を兼ねる（`web/src/main.ts:1032-1062`）。`mcp__chrome-devtools__evaluate_script` でこの要素に対して合成 `PointerEvent` を dispatch するか、`mcp__chrome-devtools__click` で直接クリックする
+3. 以降の操作は canvas 要素（`sketch-container` 配下、`web/src/main.ts:1548-1549,1556-1563`）に対する `pointerdown` → 一定時間の `pointermove` なし待機（charging） → `pointerup`（release）のシーケンスを合成する
 4. pop 連打は `pointerdown` → 即 `pointerup` を短間隔で複数回
 
-実証済みの合成イベント骨格（CatharsisField で使用。座標・待機は作品の状態機械に合わせて調整）:
+実証済みの合成イベント骨格（Heartburst で使用。座標・待機は作品の状態機械に合わせて調整）:
 
 ```js
 // evaluate_script 内。bubbles/cancelable/pointerId/isPrimary/buttons を揃えないと拾われない
@@ -29,7 +29,7 @@ const fire = (target, type, x, y) => target.dispatchEvent(new PointerEvent(type,
 
 ## 2. 音響の数値検証
 
-**Web**: `window.__catharsisAudio`（`web/src/main.ts:51`）経由で `getAmp()` を呼び出し、RMS 振幅をサンプリングする。実装は `AnalyserNode.getFloatTimeDomainData` → 二乗平均平方根（`web/src/audio/catharsis-engine.ts:325-330`）。実測値（`docs/process-log.md:122`）: pop 0.83 / charge 0.18 / release 0.59 / 減衰後 0.003。
+**Web**: `window.__heartburstAudio`（`web/src/main.ts:114`）経由で `getAmp()` を呼び出し、RMS 振幅をサンプリングする。実装は `AnalyserNode.getFloatTimeDomainData` → 二乗平均平方根（`web/src/audio/heartburst-engine.ts:1101-1106`）。実測値（`docs/process-log.md:122`）: pop 0.83 / charge 0.18 / release 0.59 / 減衰後 0.003。
 
 **到達状態**: 各状態遷移の直後に `getAmp()` を呼び、無音期待の状態（idle・decay 後）で 0 に近い値、release 直後にピークが出ることを数値で確認する。
 

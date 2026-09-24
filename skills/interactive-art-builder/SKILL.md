@@ -8,7 +8,7 @@ description: |
 
 # interactive-art-builder
 
-「体験の核（感情ゴール）」から出発し、動く・鳴る・触れる作品を完成させる。実証済みワークフロー（CatharsisField, 2026-07。参照実装: `~/Projects/visual-art`）の一般化。
+「体験の核（感情ゴール）」から出発し、動く・鳴る・触れる作品を完成させる。実証済みワークフロー（Heartburst（旧称 CatharsisField）, 2026-07。参照実装: `~/Projects/Game/heartburst`）の一般化。
 
 ## 大原則
 
@@ -91,4 +91,4 @@ architecture.md を契約書として渡し、並行実装する。
 | `references/pitfalls.md` | Phase 3 の委譲プロンプト作成時 + トラブル時 |
 | `templates/` | Phase 3（骨格として作品にコピーして肉付け） |
 
-フルコードの参照実装: `~/Projects/visual-art`（ネイティブ + ウェブ両方。存在しない場合は templates のみで進める）。
+フルコードの参照実装: `~/Projects/Game/heartburst`（ネイティブ + ウェブ両方。存在しない場合は templates のみで進める）。
