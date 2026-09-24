@@ -72,6 +72,7 @@ ln -s ~/Projects/agent-assets/scripts/<name> ~/.claude/scripts/<name>
 | cc-project-relocate | Claude Code のプロジェクトを移動・リネームした後、パスに紐づくセッションログ dir（会話・memory）を新パスへリネーム/マージ。任意で `~/.claude.json` の trust/権限も移行。本体と同一エンコードを node で計算、dry-run → 確認 → 実行 | [docs/cc-project-relocate.md](docs/cc-project-relocate.md) |
 | astro-code-review | Astro 7+ プロジェクト（Cloudflare Workers デプロイ対応）のコードを体系的にレビュー。ベストプラクティス違反・パフォーマンス・a11y・型安全性・レガシー API（5→6 削除済み）・Astro 7 移行問題（Rust コンパイラ HTML 厳格化・Sätteri・src/fetch.ts 予約名）を検出 | [docs/astro-code-review.md](docs/astro-code-review.md) |
 | gen-nanobanana-images | Google Gemini の画像生成モデル Nano Banana シリーズ GA 版（Flash2 / Pro / Nano Banana 2 Lite）で、Interactions API 基盤のテキストからの画像生成・画像編集・スタイルリファレンス・マルチターン反復修正を行う。生成のたびに出力先へ生成記録 Markdown（指示原文・プロンプト・料金目安・検証メモ）を自動作成。要 `GEMINI_API_KEY`・SDK >= 2.11.0 | [docs/gen-nanobanana-images.md](docs/gen-nanobanana-images.md) |
+| drive-public-harvest | リンク共有された Google Drive フォルダを認証・ブラウザ無しで列挙・一括取得。`embeddedfolderview` で通常のフォルダページの 50 件打ち切り（無警告）を回避し、全件・並列・低トークンで済む。列挙 → 絞る → 落とすの 3 段で、他機種の同居や販促バナーの混入を弾いてから取得する。拡張子なしファイル・100MB 超の確認ページ・重複配布への対処を同梱 | [docs/drive-public-harvest.md](docs/drive-public-harvest.md) |
 | gen-infographic | 日本語の文章・メモ・PDF・スクショなどを 1 枚の読みやすい図解画像へ変換。構造（流れ図・対比・循環・一覧）とスタイル（手描き／ミニマル／水彩／設計図風）を独立に組合せ | [docs/gen-infographic.md](docs/gen-infographic.md) |
 | gen-lifestyle-images | 商品のライフスタイル写真を一括生成。ブランド・商品カタログ・シーンをプリセット管理し、セミオート（プラン提示→承認→生成）で量産。要 `GEMINI_API_KEY` | [docs/gen-lifestyle-images.md](docs/gen-lifestyle-images.md) |
 | image-gen-handoff | Codex `image_gen` / Image 2.0 の大量生成後に、保存済み画像と session JSONL から最終生成プロンプト・sha256・寸法・欠損・重複を manifest 化し、軽量な引き継ぎノートを作成 | [docs/image-gen-handoff.md](docs/image-gen-handoff.md) |
@@ -87,6 +88,7 @@ ln -s ~/Projects/agent-assets/scripts/<name> ~/.claude/scripts/<name>
 | mac-gui-router | Mac の GUI 操作・スクショ依頼の方式判定ルーター。公式 computer-use / 自作ループ（screencapture + CGEvent）/ chrome-devtools から最適を選び、操作 = 公式・撮影 = 自作のハイブリッド（操作マニュアル作成）にも対応。要ヘルパー 3 種（付属手順でビルド） | [docs/mac-gui-router.md](docs/mac-gui-router.md) |
 | claude-config-audit | `~/.claude` グローバル設定の健全性検査。死 symlink・disabled なのにキャッシュ残存の plugin・MCP 重複登録・orphan commands を検出。レポートのみ・自動削除なし。pre-add モードで追加前の重複チェックも可能 | [docs/claude-config-audit.md](docs/claude-config-audit.md) |
 | handover-scaffold | 別セッションで無人実行させる「指示書（引き継ぎドキュメント）」の骨組みを一発生成。`handover/` バッチのフォルダ・`00_実行順.md` マニフェスト・指示書スケルトンを規約どおりに作成 | [docs/handover-scaffold.md](docs/handover-scaffold.md) |
+| koboyo-icon-jp | 日本語の依頼から koboyo の手描き SVG アイコン（71,238 点 / 111 カテゴリ）を探して配置。koboyo の検索は英語のみのため、主題語の英訳辞書（直訳が滑る語 / カタカナの罠 / 抽象語の比喩化）と 111 カテゴリの日本語逆引き表を同梱。候補は実物のコンタクトシート HTML（実寸比保持・ライト/ダーク切替・番号付き・Artifact 対応）で見せてから採用する運用を必須化。要 koboyo-icons MCP | [docs/koboyo-icon-jp.md](docs/koboyo-icon-jp.md) |
 | emdash-cms | EmDash（Astro + Cloudflare の full-stack TypeScript CMS、emdash 0.29 基準）の構築支援。セットアップ・コンテンツモデリング・クエリ / Portable Text・認証・プラグイン開発（sandboxed / native）・メール（公式 `cloudflareEmail()` + Email Service）・Forms・WordPress 移行・MCP 連携。v0.x ベータのため鮮度検証手順を内蔵 | [docs/emdash-cms.md](docs/emdash-cms.md) |
 
 ## サブエージェント一覧

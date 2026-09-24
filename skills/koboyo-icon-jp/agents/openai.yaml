@@ -1,0 +1,4 @@
+interface:
+  display_name: "koboyo アイコン探し（日本語）"
+  short_description: "日本語の依頼から koboyo の手描きアイコンを探して選ぶ"
+  default_prompt: "$koboyo-icon-jp で、空状態のイラストに使える手描きアイコンの候補を出して。"
