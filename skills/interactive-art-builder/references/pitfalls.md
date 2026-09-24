@@ -113,11 +113,13 @@ Heartburst（旧称 CatharsisField）制作工程（`docs/skill-plan.md` 5節・
 - **症状**: PC では鳴るのに、スマホでは音が全く出ない（Strudel 層も起動しない）
 - **原因**: ブラウザの autoplay 制約で、初回ユーザー操作までは音が出せない。さらに HTML の user activation は、マウスなら `pointerdown` で成立するが、**タッチでは `pointerup` / `touchend` まで成立しない**。導入ゲートの `pointerdown` で `AudioContext.resume()` を呼び、その解決を `await` していたため、スマホでは ctx が suspended のまま止まっていた
 - **対処**:
-  - 制約は演出に変換する。「画面に触れて、溜めて、解放する」の導入オーバーレイを置き、最初の操作をそのまま 1 回目の溜めに繋げる（`web/src/main.ts:1028-1062`）
+  - 制約は演出に変換する。「画面に触れて、溜めて、解放する」の導入オーバーレイを置く（`web/src/main.ts:1028-1062`）
   - `start()` は `resume()` を待たずに配線まで済ませる。`pointerup` / `touchend` / `click` / `keydown` のたびに、止まっていれば `resume()` する常駐リスナーを置く（`heartburst-engine.ts` の `installUnlockListeners()`）。iOS の着信・バックグラウンド復帰で止まった場合もこれで戻る
   - Strudel 層は ctx の `statechange` で running になってから起動する（`whenRunning()`）
   - 音声の起動を待つ間に指が離れていたら、溜めでなくタップとして扱う。離し済みのまま charging に入ると、次のタップまで抜けられない
-  - 残る仕様: スマホでは最初の長押しの間は無音で、指を離した瞬間から鳴る
+  - タッチ端末の 1 回目の扱いは美的判断なので、実装前に AskUserQuestion でユーザーに選ばせる（残る仕様として告知するだけで済ませない）。iOS では触れた瞬間には音を出せないため、次の 2 択になる
+    - A. タッチ端末だけ「タップして始める」ゲートにする。導入のタップ（`pointerup`）で解錠し、溜めは次のタッチから。1 回目から全部の音が鳴る。マウスは従来どおり `pointerdown` でそのまま溜めに入れる
+    - B. 最初の操作をそのまま 1 回目の溜めに繋げる（Heartburst の選択）。スマホでは最初の長押しの間は無音で、指を離した瞬間から鳴る。上の「指が離れていたらタップとして扱う」はこの B で必要になる
 - 検証はマウスの合成イベントだけでは通ってしまう。CDP で本物のタッチを送る（`verification.md` の 7 節）
 
 ### resume() が解決しない環境で描画ループごと止まる
