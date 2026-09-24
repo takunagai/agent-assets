@@ -34,6 +34,7 @@ Phase 1-2 は並行実装可能（AudioEngine 契約で視覚と音響が分離�
 ## ウェブ固有の落とし穴（詳細な症状/原因/対処は pitfalls.md 参照）
 
 - **p5 v2 の FES 偽陽性**: HSB 4引数 `stroke()` を誤検知し fps を殺す → `p5.disableFriendlyErrors = true` を本番必須に（`main.ts:38-40`）
+- **p5 2.3.3 は型定義が入っていない**: `types` の指す `.d.ts` が配布物に無い → `"p5": "2.3.2"` に固定するか、使う API だけの型定義ファイルで補う。`@types/p5`（v1 用）は入れない
 - **pixelDensity(1) は createCanvas の後**: p5 v2 では前に呼ぶと無効。`canvas.width` の実測で検証する（`main.ts:1519-1520`）
 - **DelayNode フィードバックループは最小128サンプル**: 高音域の Karplus-Strong が組めない → 起動時にオフライン合成して `AudioBuffer` バンク化（`heartburst-engine.ts:1020-1061`）
 - **p5.noise はネイティブより桁違いに遅い**: 粒子ごとに4フレームに1回の再計算（スロット分散）+ lerp 平滑化（`visuals.ts:302,317-320`）

@@ -18,6 +18,12 @@ Heartburst（旧称 CatharsisField）制作工程（`docs/skill-plan.md` 5節・
 - **原因**: p5 v2 の入力検証が誤検知する（`web/src/main.ts:40` 付近）
 - **対処**: 本番ビルドで `p5.disableFriendlyErrors = true` を必須にする（`(p5 as unknown as {...}).disableFriendlyErrors = true`、`web/src/main.ts:40`）
 
+### p5 2.3.3 は型定義を同梱していない
+
+- **症状**: `import p5 from "p5"` が型エラーになる（型定義が見つからない）
+- **原因**: p5 2.3.3（2026-09-07 公開、2026-09-24 時点の最新版）は、package.json の `types` / `exports` が `./types/p5.d.ts` を指しているのに、配布物に `.d.ts` が 1 つも入っていない。2.3.0〜2.3.2 には同梱されている（`npm pack p5@<版> --dry-run` で実測）。`@types/p5` は v1 用で v2 の API と合わない
+- **対処**: `"p5": "2.3.2"` に固定して同梱の型を使う（Heartburst は 2.3.0 で問題なし）。2.3.3 以降が必要なら、使う API だけを宣言した型定義ファイル（例: `src/p5-shim.d.ts`）で補う（スモークテスト作品 Prism Pop の対処）。新しい版を入れるときは `npm pack p5@<版> --dry-run --json` で `.d.ts` の有無を確かめる
+
 ### pixelDensity(1) は createCanvas の後でないと効かない
 
 - **症状**: retina 環境で描画が重く、解放時にアニメーションが停止・スローモーション化する
@@ -214,9 +220,9 @@ Heartburst（旧称 CatharsisField）制作工程（`docs/skill-plan.md` 5節・
 
 ### 音出しテスト前後のシステム音量退避・復元
 
-- **症状**: 音出しテストで不意に大音量が出る、あるいは復元し忘れて後続作業に影響する
-- **原因**: SynthDef やパターンの初期音量が想定外に大きい場合がある。BT スピーカー・耳の保護が必要
-- **対処**: `osascript -e 'set volume output volume 40'` のように事前に音量を絞り、終了後に元音量へ復元する（元音量の退避を忘れない）
+- **症状**: 音出しテストで不意に大音量が出る、あるいは復元し忘れて後続作業に影響する。逆に、元の音量が低いのに一律 40 に設定すると音量を上げてしまう（スモークテスト作品 Prism Pop で、元 13 → 40 にしかけてすぐ取り消した）
+- **原因**: SynthDef やパターンの初期音量が想定外に大きい場合がある。BT スピーカー・耳の保護が必要。「40 に設定する」は「絞る」ではない
+- **対処**: 先に現在値を取得して退避する（`osascript -e 'output volume of (get volume settings)'`）。45 より高いときだけ `osascript -e 'set volume output volume 40'` で下げ、低いときは触らない。終了後は退避した値へ戻す
 
 ## 検証
 
