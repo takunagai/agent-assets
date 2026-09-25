@@ -136,6 +136,23 @@ const kv = runtime.env.MY_KV;
 | KV キャッシュ活用 | 頻繁にアクセスするデータは KV にキャッシュ |
 | R2 画像配信 | 画像は R2 + Cloudflare Images で配信 |
 | D1 データベース | SQLite 互換のエッジデータベースを活用 |
+| `session: false` | session を使わないプロジェクトで KV binding の要求と SSR バンドルの session ランタイムを外す（下記） |
+
+### session を使わないなら `session: false`（Info）
+
+`@astrojs/cloudflare` v14 は、`astro.config` に `session` の driver が無いと Cloudflare KV の session driver（binding 名 `SESSION`）を**自動で設定**し、wrangler 設定に `SESSION` の KV binding を要求する（ビルド時に `Enabling sessions with Cloudflare KV with the "SESSION" KV binding.` と出る）。`Astro.session` を使っていないプロジェクトは、`session: false`（astro 7.2+ #16871、adapter 14.2.0+）で自動設定を止められる。KV binding の要求が消え、session ランタイム（`unstorage`）が Worker の SSR バンドルから tree-shake される。
+
+```javascript
+// astro.config.mjs
+export default defineConfig({
+  adapter: cloudflare(),
+  session: false, // Astro.session を使っていないときだけ
+});
+```
+
+- 検出の目安: `Astro.session` / `context.session` の使用が無く、`session` 設定も無い SSR プロジェクト
+- `Astro.session` を使っているプロジェクトには勧めない（session が無効になる）
+- 確認日 2026-09-25: adapter 14.3.3 の `dist/index.js`（`session !== false && !session?.driver` のとき KV driver を設定）と CHANGELOG 14.2.0（#16871）
 
 ---
 

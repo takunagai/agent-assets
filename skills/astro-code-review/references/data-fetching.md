@@ -28,6 +28,14 @@ const blog = defineCollection({
 export const collections = { blog };
 ```
 
+**活用機会 (Info) ─ `glob()` の `deferRender`（Astro 7.1+）:** Markdown が数千件ある、または `rehype-katex` のような重い rehype プラグインで描画結果がソースより大きく膨らむコレクションは、`glob({ ..., deferRender: true })` で content sync 時の先行レンダリングをやめ、ページで実際に描画するときに回せる（`.mdx` と同じオンデマンド経路）。`astro build` のメモリ使用量が減る。トレードオフ: 既定の `false` はレンダリング結果をビルドをまたいでキャッシュするが、`true` にするとこのキャッシュが効かない。ビルドのメモリ不足や sync の遅さが出ていないコレクションには勧めない。
+
+```typescript
+const docs = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: 'src/content/docs', deferRender: true }),
+});
+```
+
 ---
 
 ## Content Collections

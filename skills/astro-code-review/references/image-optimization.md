@@ -26,6 +26,8 @@ import myImage from '../assets/hero.png';
 - loading="lazy" のデフォルト適用
 - decoding="async" のデフォルト適用
 
+> **sharp の扱い（astro 7.2.8 以降）**: 画像変換を担う sharp は astro の optionalDependencies（`^0.35.4`）で、7.2.8（#17837）で最小対応版が 0.35.4 に上がった。pnpm では astro は自分の依存の sharp を読むため、プロジェクトの package.json に `sharp` を直接依存として足す必要はない。以前の案内どおり直接依存にしていると、使われない古い sharp（例: 0.34.x）が残り audit の high の原因になる ─ コードが `sharp` を直接 import していなければ削除、import しているなら `^0.35.4` 以上へ。検出は観点 13（`migration-checks.md`）の [Deps]。
+
 ---
 
 ## ローカル画像 vs リモート画像

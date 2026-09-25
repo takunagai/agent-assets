@@ -9,7 +9,7 @@
 // 実際に astro build に通す用途ではない（未クローズタグを意図的に含むため）。
 //
 // なお、次の 2 つは .astro 単体では表現できないプロジェクトレベルの検出対象:
-// - [W][Astro 7] astro.config の markdown.remarkPlugins / rehypePlugins（Sätteri 非互換の可能性）
+// - [W][Astro 7] astro.config の markdown.remarkPlugins / rehypePlugins（7.0 から非推奨。警告は出るが動く。@astrojs/markdown-remark が必須）
 // - [W][Astro 7] src/fetch.ts の予約名衝突（advanced routing 目的でない同名ファイル）
 ---
 

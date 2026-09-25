@@ -1,0 +1,38 @@
+# テストケース5 の lockfile（最小の抜粋。実物の pnpm-lock.yaml から検出に必要な部分だけを残した）
+# 範囲指定（specifier）と解決版（version）の違いを試す: astro は ^7.0.0 だが 7.2.5 に解決している
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@astrojs/markdown-remark':
+        specifier: 7.2.1
+        version: 7.2.1
+      astro:
+        specifier: ^7.0.0
+        version: 7.2.5(typescript@5.9.3)
+      remark-toc:
+        specifier: ^9.0.0
+        version: 9.0.0
+      sharp:
+        specifier: ^0.34.3
+        version: 0.34.5
+
+packages:
+
+  '@astrojs/markdown-remark@7.2.1':
+    resolution: {integrity: sha512-EXCERPT}
+
+  astro@7.2.5:
+    resolution: {integrity: sha512-EXCERPT}
+    engines: {node: '>=22.12.0'}
+    hasBin: true
+
+  sharp@0.34.5:
+    resolution: {integrity: sha512-EXCERPT}
+    engines: {node: ^18.17.0 || ^20.3.0 || >=21.0.0}

@@ -1,9 +1,9 @@
 ---
 name: astro-code-review
-version: "3.0.0"
+version: "3.1.0"
 astro: "^7.0.0"
 cloudflare: "@astrojs/cloudflare ^14.0.0"
-description: "Astro 7+ コードレビュースキル。Astroプロジェクト（Cloudflare Workers デプロイ対応）のコードを体系的にレビューし、ベストプラクティス違反・パフォーマンス問題・アクセシビリティ欠陥・型安全性の欠如・レガシー API（Astro 5/6 時代の削除済みパターン）・Astro 7 移行問題（Rust コンパイラの HTML 厳格化・Sätteri・src/fetch.ts 予約名）を検出して改善提案を行う。『Astroのコードをレビューして』『このAstroコンポーネントをチェックして』『Astroプロジェクトの品質を確認して』『Astro review』などのリクエストで発動。"
+description: "Astro 7+ コードレビュースキル。Astroプロジェクト（Cloudflare Workers デプロイ対応）のコードを体系的にレビューし、ベストプラクティス違反・パフォーマンス問題・アクセシビリティ欠陥・型安全性の欠如・レガシー API（Astro 5/6 時代の削除済みパターン）・Astro 7 移行問題（Rust コンパイラの HTML 厳格化・Sätteri・src/fetch.ts 予約名）・依存のセキュリティ勧告（astro / sharp の版）を検出して改善提案を行う。『Astroのコードをレビューして』『このAstroコンポーネントをチェックして』『Astroプロジェクトの品質を確認して』『Astro review』などのリクエストで発動。"
 ---
 
 # Astro Code Review Skill
@@ -16,7 +16,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 
 | 項目 | バージョン |
 |------|-----------|
-| Astro | 7.0.0 以上（GA） |
+| Astro | 7.0.0 以上（GA）。7.2.8 未満は GHSA-26w7-cxv4-gfx2 のため Critical |
 | Node.js | 22.12.0 以上（`astro@7` の engines は `>=22.12.0`。奇数メジャー非対応） |
 | デプロイ先 | Cloudflare Workers（static assets 付き。Pages は非対応） |
 | アダプター | @astrojs/cloudflare v14+ |
@@ -32,6 +32,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 - **レガシー API（Astro 5/6 で削除済みパターン）の検出と修正ガイダンス**
 - **Astro 7 移行問題の検出（Rust コンパイラの HTML 厳格化・Sätteri・src/fetch.ts 予約名ほか）**
 - **Cloudflare Workers デプロイの最適化**
+- **依存のセキュリティ勧告の検出（lockfile で解決された astro / sharp / `@astrojs/markdown-remark` の版）**
 
 ## 発動条件（優先順位順）
 
@@ -50,12 +51,13 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 /astro-code-review --fix                        # 安全な自動修正を適用
 ```
 
-## レビュー観点（12カテゴリ）
+## レビュー観点（13カテゴリ）
 
-観点 1〜9 はバージョン非依存の普遍的なベストプラクティス。観点 10 は Astro 5 → 6 で削除されたレガシー API 検出、観点 11 は Astro 6 → 7 の移行問題、観点 12 は Cloudflare Workers デプロイ検証。
+観点 1〜9 はバージョン非依存の普遍的なベストプラクティス。観点 10 は Astro 5 → 6 で削除されたレガシー API 検出、観点 11 は Astro 6 → 7 の移行問題、観点 12 は Cloudflare Workers デプロイ検証、観点 13 は依存・セキュリティ勧告（package.json と lockfile で判定）。
 
 - **観点 1〜9（Island / TypeScript / 画像 / コンポーネント / データ取得 / SEO / a11y / セキュリティ / パフォーマンス）の検出対象・ルール表・修正例**: [references/review-criteria.md](references/review-criteria.md) を Read してから Step 2 の静的解析を行う
-- **観点 10〜12（レガシー API 5→6 / Astro 7 移行 / Cloudflare Workers デプロイ検証）の検出対象と修正例**: [references/migration-checks.md](references/migration-checks.md) を Read（Zod 4 / CSP / Live Collections を移行対象と誤検出しない注意を含む）
+- **観点 10〜13（レガシー API 5→6 / Astro 7 移行 / Cloudflare Workers デプロイ検証 / 依存・セキュリティ勧告）の検出対象と修正例**: [references/migration-checks.md](references/migration-checks.md) を Read（Zod 4 / CSP / Live Collections を移行対象と誤検出しない注意を含む）
+- 観点 13 の分担: 本スキルは package.json と lockfile を Read で読むだけで、`pnpm audit` 等は実行しない。レポートで audit の実行をユーザーに促す
 - 観点 12 の分担: デプロイの実行手順は姉妹スキル `deploy-astro-cloudflare` の担当。本スキルは検出に徹する
 
 ---
@@ -68,7 +70,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 | **Warning** | パフォーマンス問題、推奨パターン逸脱 | 優先的に修正 |
 | **Info** | ベストプラクティス提案、最適化機会 | 検討推奨 |
 
-ラベル体系: **[Legacy]** = Astro 5 → 6 で削除された API（観点 10）。**[Astro 7]** = Astro 6 → 7 の移行問題（観点 11）。**[Cloudflare]** = Workers デプロイ検証（観点 12）。
+ラベル体系: **[Legacy]** = Astro 5 → 6 で削除された API（観点 10）。**[Astro 7]** = Astro 6 → 7 の移行問題（観点 11）。**[Cloudflare]** = Workers デプロイ検証（観点 12）。**[Deps]** = 依存・セキュリティ勧告（観点 13。package.json の範囲指定ではなく lockfile の解決版で判定）。
 
 ### Critical（即時対応必須）
 - `set:html` での未サニタイズデータ使用
@@ -81,6 +83,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 - **[Astro 7]** 未クローズタグ・不正ネスト（Rust コンパイラでビルド不能）
 - **[Cloudflare]** `Astro.locals.runtime` の使用
 - **[Cloudflare]** Node.js 専用API の使用
+- **[Deps]** lockfile で解決された astro が 7.2.8 未満（GHSA-26w7-cxv4-gfx2 ─ AVIF 画像最適化経由の RCE）
 
 ### Warning（改善推奨）
 - 不適切な `client:*` ディレクティブ選択
@@ -90,11 +93,13 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 - エラーハンドリングの不足
 - **[Legacy]** legacy Content Collections API の使用
 - **[Legacy]** `import { z } from 'astro:content'`
-- **[Astro 7]** `markdown.remarkPlugins` / `rehypePlugins` 使用（Sätteri 非互換の可能性）
+- **[Astro 7]** `markdown.remarkPlugins` / `rehypePlugins` / `remarkRehype` 使用（7.0 から非推奨。警告は出るが動く。`@astrojs/markdown-remark` が必須）
 - **[Astro 7]** `src/fetch.ts` の予約名衝突
 - **[Astro 7]** `getContainerRenderer` の旧 import 経路 / `@astrojs/db` / `astro:transitions` 内部 API
 - **[Cloudflare]** `platformProxy` の残骸・`main` 旧値・`.assetsignore` の残骸
 - **[Cloudflare]** `prerender` 設定の最適化不足
+- **[Deps]** package.json の `sharp` 直接依存が 0.35.4 未満を許す範囲
+- **[Deps]** `@astrojs/markdown-remark` の版が astro の解決版の peer 要件を満たさない（astro の更新を勧めるなら更新先の版と比べる）
 
 ### Info（ベストプラクティス提案）
 - セマンティックHTML要素の活用
@@ -106,6 +111,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 - **[Cloudflare]** CSP（`security.csp` ─ stable）設定の推奨
 - **[Cloudflare]** Live Collections（stable）の活用機会
 - **[Cloudflare]** KV / R2 / D1 / Route Caching（`cacheCloudflare()`）の活用機会
+- **[Deps]** Starlight の peer（`astro` の範囲）を lockfile の astro 解決版が満たしていない
 
 ---
 
@@ -119,6 +125,8 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 パターン: **/*.astro
 パス: 指定されたディレクトリ、または カレントディレクトリ
 ```
+
+**依存ファイル（観点 13 用）:** `.astro` に加えて、プロジェクトルートの `package.json` と lockfile（`pnpm-lock.yaml` / `package-lock.json` / `yarn.lock`）を Read し、[Deps] の判定に使う。版は lockfile の解決版で判定する（package.json の `^7.0.0` のような範囲指定では判定しない）。lockfile が無ければ [Deps] の版判定は「判定不能」と書き、`pnpm audit`（npm なら `npm audit`）の実行を促す
 
 **判断ロジック:**
 - 引数がファイルパス（`.astro`で終わる）→ そのファイルのみ対象
@@ -149,6 +157,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 - [ ] **[Astro 7]** 未クローズタグ・不正ネスト（`<p>` 内 `<div>` 等）がないか（v7 Rust コンパイラでビルド不能）
 - [ ] **[Cloudflare]** `Astro.locals.runtime` が使用されていないか
 - [ ] **[Cloudflare]** `fs`, `path`, `child_process` 等の Node.js 専用API が使用されていないか
+- [ ] **[Deps]** lockfile で解決された astro が 7.2.8 以上か（未満なら GHSA-26w7-cxv4-gfx2。根拠に解決版を書く。lockfile が無ければ「判定不能」として audit を促す）
 
 #### Warning チェック
 - [ ] `client:load` が不適切に使用されていないか（重いコンポーネント、Below-the-fold）
@@ -161,10 +170,12 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 - [ ] **[Legacy]** `entry.slug` ではなく `entry.id` を使用しているか
 - [ ] **[Legacy]** `entry.render()` ではなく `render(entry)` を使用しているか
 - [ ] **[Legacy]** `import { z } from 'astro/zod'` を使用しているか（`astro:content` からの z import は不可）
-- [ ] **[Astro 7]** `astro.config` の `markdown.remarkPlugins` / `rehypePlugins` が Sätteri 移行 or `@astrojs/markdown-remark` 切り戻し済みか
+- [ ] **[Astro 7]** `astro.config` の `markdown.remarkPlugins` / `rehypePlugins` / `remarkRehype`（7.0 から非推奨）が `markdown.processor: unified({...})` へ移行済みか、または Sätteri へ移行済みか
 - [ ] **[Astro 7]** `src/fetch.ts` が advanced routing 目的か（意図しない予約名衝突がないか）
 - [ ] **[Astro 7]** `@astrojs/db` / `astro:db`・`astro:transitions` 内部 API・旧 `getContainerRenderer` import が残っていないか
 - [ ] **[Cloudflare]** `platformProxy` の残骸・`main` 旧値（`dist/_worker.js/index.js`）・`public/.assetsignore` の残骸がないか
+- [ ] **[Deps]** package.json の `sharp` 直接依存が 0.35.4 未満を許す範囲になっていないか（コードが `sharp` を直接 import していないかも grep で確認）
+- [ ] **[Deps]** `@astrojs/markdown-remark` の版が astro の解決版の peer 要件を満たすか（astro 7.2.8 以前はパッチ版まで完全一致の指定、7.2.10 以降は `^7.3.0`。上の astro 7.2.8 未満の項目で astro の更新を勧めるときは、更新先の版と比べる）
 
 #### Info チェック
 - [ ] セマンティックHTML要素（`<main>`, `<nav>`, `<article>`）を使用しているか
@@ -174,6 +185,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 - [ ] **[Astro 7]** `compressHTML` 既定変更（`'jsx'`）でインラインレイアウトに表示差が出ていないか / Vite 固有プラグインが Vite 8 対応か
 - [ ] **[Cloudflare]** CSP が `security.csp` で有効化されているか（stable）
 - [ ] **[Cloudflare]** 静的ページに `export const prerender = true` が設定されているか
+- [ ] **[Deps]** Starlight を使っているなら、その peer（`astro` の範囲）を lockfile の astro 解決版が満たすか
 
 ---
 
@@ -283,6 +295,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 | **Legacy API (5→6)** | 0 | 0 | 0 |
 | **Astro 7 Migration (6→7)** | 0 | 0 | 0 |
 | **Cloudflare** | 0 | 0 | 0 |
+| **Dependencies (Deps)** | 0 | 0 | 0 |
 | **合計** | **3** | **5** | **3** |
 
 ### 総合評価
@@ -297,6 +310,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 | レガシー API (5→6) | ✅ 良好 |
 | Astro 7 移行 (6→7) | ✅ 良好 |
 | Cloudflare 対応 | ✅ 良好 |
+| 依存・セキュリティ勧告 | ✅ 良好 |
 
 ---
 
@@ -382,7 +396,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 - `references/seo-a11y-security.md` - SEO/アクセシビリティ/セキュリティ
 - `references/cloudflare-deployment.md` - Cloudflare Workers デプロイ・bindings・v14 移行検出
 - `references/review-criteria.md` - 観点 1〜9 の検出対象・修正例（レビュー時に Read）
-- `references/migration-checks.md` - 観点 10〜12 レガシー / Astro 7 / Cloudflare 検出（レビュー時に Read）
+- `references/migration-checks.md` - 観点 10〜13 レガシー / Astro 7 / Cloudflare / 依存・セキュリティ勧告の検出（レビュー時に Read）
 - **CI/CD に組み込むとき**: [references/ci-cd-integration.md](references/ci-cd-integration.md) を Read（GitHub Actions / pre-commit の雛形をコピーして使う）
 - **改訂履歴の確認・更新時**: [references/changelog.md](references/changelog.md) を Read
 

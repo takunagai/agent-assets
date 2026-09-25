@@ -326,6 +326,28 @@ export default defineConfig({
 });
 ```
 
+#### 指令の絞り込み ─ `kind` オプション（Astro 7.1+、Info）
+
+`resources` / `hashes` の各要素を `{ resource, kind }` のオブジェクトにすると、`script-src-elem` / `script-src-attr` / `style-src-elem` / `style-src-attr` に絞って許可できる。`kind: 'element'` は `*-src-elem`、`'attribute'` は `*-src-attr`、`'default'`（素の文字列・ハッシュと同じ）は `script-src` / `style-src`。`define:vars` や Shiki が出すインライン `style` 属性のために `style-src` 全体へ `'unsafe-inline'` を足している設定は、`kind: 'attribute'` に絞る活用機会として提案する（欠陥ではなく Info）。
+
+```javascript
+// astro.config.mjs
+export default defineConfig({
+  security: {
+    csp: {
+      scriptDirective: {
+        resources: [{ resource: 'https://cdn.example.com', kind: 'element' }],
+      },
+      styleDirective: {
+        resources: [{ resource: "'unsafe-inline'", kind: 'attribute' }],
+      },
+    },
+  },
+});
+```
+
+ランタイム API も同じ形を受け取る: `ctx.csp.insertScriptResource({ resource, kind })` / `ctx.csp.insertStyleResource({ resource, kind })`。
+
 #### Cloudflare 連携
 
 ```javascript
