@@ -259,4 +259,3 @@ ln -s ~/Projects/agent-assets/skills/koboyo-icon-jp ~/.agents/skills/koboyo-icon
 ## 関連
 
 - `gen-nanobanana-images` / `gpt-image-2` ─ 主役級のビジュアル生成はこちら。koboyo は概念を指す記号・線画の担当
-- `image-gen-handoff` ─ 生成物をユーザーに見せてから承認を取る流儀は共通

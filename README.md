@@ -75,7 +75,7 @@ ln -s ~/Projects/agent-assets/scripts/<name> ~/.claude/scripts/<name>
 | drive-public-harvest | リンク共有された Google Drive フォルダを認証・ブラウザ無しで列挙・一括取得。`embeddedfolderview` で通常のフォルダページの 50 件打ち切り（無警告）を回避し、全件・並列・低トークンで済む。列挙 → 絞る → 落とすの 3 段で、他機種の同居や販促バナーの混入を弾いてから取得する。拡張子なしファイル・100MB 超の確認ページ・重複配布への対処を同梱 | [docs/drive-public-harvest.md](docs/drive-public-harvest.md) |
 | gen-infographic | 日本語の文章・メモ・PDF・スクショなどを 1 枚の読みやすい図解画像へ変換。構造（流れ図・対比・循環・一覧）とスタイル（手描き／ミニマル／水彩／設計図風）を独立に組合せ | [docs/gen-infographic.md](docs/gen-infographic.md) |
 | gen-lifestyle-images | 商品のライフスタイル写真を一括生成。ブランド・商品カタログ・シーンをプリセット管理し、セミオート（プラン提示→承認→生成）で量産。要 `GEMINI_API_KEY` | [docs/gen-lifestyle-images.md](docs/gen-lifestyle-images.md) |
-| image-gen-handoff | Codex `image_gen` / Image 2.0 の大量生成後に、保存済み画像と session JSONL から最終生成プロンプト・sha256・寸法・欠損・重複を manifest 化し、軽量な引き継ぎノートを作成 | [docs/image-gen-handoff.md](docs/image-gen-handoff.md) |
+| image-gen-handoff | **お蔵入り（2026-09-30、symlink 登録解除済み）**。Codex `image_gen` / Image 2.0 の大量生成後に、保存済み画像と session JSONL から最終生成プロンプト・sha256・寸法・欠損・重複を manifest 化し、軽量な引き継ぎノートを作成 | [docs/image-gen-handoff.md](docs/image-gen-handoff.md) |
 | git-workflow | Git ワークフロー支援。Conventional Commits（日本語 subject）でのメッセージ生成・コミット前チェック（機密情報/デバッグコード等）・ブランチ命名規則・マージ戦略ガイド | [docs/git-workflow.md](docs/git-workflow.md) |
 | obsidian-vault-create | 新しい Obsidian Vault を標準レイアウトで作成。`YYYY-MM-DD-Project` 命名・数値プレフィックスのフォルダ・README/Home・任意で `.obsidian` 設定コピー。`~/Documents` 既定 | [docs/obsidian-vault-create.md](docs/obsidian-vault-create.md) |
 | refund-request | 返金・キャンセル請求メールを、相手企業のポリシー調査の上で交渉力のある文面に。英語・日本語対応、送信前チェックリスト＋4 段階フォローアップ戦略つき | [docs/refund-request.md](docs/refund-request.md) |
