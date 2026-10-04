@@ -61,7 +61,7 @@ pnpm exec wrangler r2 bucket create emdash-media
 pnpm exec wrangler kv namespace create CACHE     # 出力の id を kv_namespaces に転記（Object Cache 使用時のみ）
 ```
 
-EmDash docs には「初回デプロイ時に存在しなければ wrangler が自動プロビジョニングする」との記載もあり、実際に公式テンプレートの `wrangler.jsonc` は `database_id` を持たない（自動プロビジョニング前提の作り ─ 2026-07-14 実機確認）。ただし非対話環境（Workers Builds 等）では効かない場合があるため、確実にやるなら上記の明示作成 + ID 転記。接続済みなら `cloudflare-bindings` MCP でも作成・確認できる（後述の「MCP 連携」）。
+EmDash docs には「初回デプロイ時に存在しなければ wrangler が自動プロビジョニングする」との記載もあり、実際に公式テンプレートの `wrangler.jsonc` は `database_id` を持たない（自動プロビジョニング前提の作り ─ 2026-07-14 実機確認）。ただし非対話環境（Workers Builds 等）では効かない場合があるため、確実にやるなら上記の明示作成 + ID 転記。一覧・取得は `cloudflare` MCP の `execute`（GET）でも確認できる（後述の「MCP 連携」。作成は wrangler）。
 
 ## astro.config.mjs 設定
 
@@ -331,10 +331,10 @@ wrangler secret put EMDASH_ENCRYPTION_KEY
 
 公式プラグイン `cloudflare` の MCP サーバーが接続済み（OAuth 認証済み）なら、次を CLI コマンドの代わりに使ってよい。未接続・未認証の場合は従来どおり CLI で続行する。
 
-- **D1 / R2 / KV の作成・確認** ─ `cloudflare-bindings`（データベース・バケット・namespace の作成/一覧/取得）。未接続時は `wrangler d1 create <name>` / `wrangler r2 bucket create <name>` / `wrangler kv namespace create <name>`
-- **本番ログ確認** ─ `cloudflare-observability`（Worker ログ・分析）。未接続時は `wrangler tail`
-- **ドキュメント疑問点の確認** ─ `cloudflare-docs`（認証不要・常時使用可）。Email Service / Dynamic Workers / D1 / Hyperdrive の仕様確認の第一手段としてよい
-- **デプロイ状態確認** ─ `cloudflare-builds` は委譲先 `deploy-astro-cloudflare` 側のガイダンスに従う
+- **D1 / R2 / KV の作成・確認** ─ 作成は `wrangler d1 create <name>` / `wrangler r2 bucket create <name>` / `wrangler kv namespace create <name>`。一覧・取得は `cloudflare` MCP の `execute`（GET）でもよい。Read only スコープで認証した場合、MCP からは作成できない
+- **本番ログ確認** ─ 第一手段は `wrangler tail`。`cloudflare` MCP の `execute` から Workers Observability API を呼ぶ方法は、Read only スコープで使えるか未検証
+- **ドキュメント疑問点の確認** ─ `cloudflare` MCP の `docs` ツール（OAuth 認証が必要。未接続時は developers.cloudflare.com を直接参照）。Email Service / Dynamic Workers / D1 / Hyperdrive の仕様確認の第一手段としてよい
+- **デプロイ状態確認** ─ 委譲先 `deploy-astro-cloudflare` 側のガイダンスに従う
 
 ## トラブルシューティング
 
@@ -346,7 +346,7 @@ wrangler secret put EMDASH_ENCRYPTION_KEY
 | スケジュール公開が動かない | `wrangler.jsonc` に `triggers.crons` があるか、`src/worker.ts` が `@emdash-cms/cloudflare/worker` の `PluginBridge` を export しているか確認する |
 | メール送信が "Email is not configured" | `cloudflareEmail()` プラグインを有効化し、**設定 → Email** でプロバイダとして選択したか確認する（有効化だけでは自動選択されない） |
 | SSR リクエストがハングし、ログに何も出ない | `session: "auto"`（D1 read replica）と compatibility flag `global_fetch_strictly_public` を併用していないか確認する |
-| 本番でエラーが再現するがログを追いたい | 接続済みなら `cloudflare-observability` MCP で本番ログ・分析を確認。未接続時は `wrangler tail` |
+| 本番でエラーが再現するがログを追いたい | `wrangler tail` で本番ログを確認する |
 
 ## 参照ドキュメント
 

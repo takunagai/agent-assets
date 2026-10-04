@@ -25,7 +25,7 @@
 
 ```bash
 git clone git@github.com:takunagai/agent-assets.git ~/Projects/agent-assets
-ln -s /Users/$USER/Projects/agent-assets/skills/deploy-nextjs-cloudflare ~/.agents/skills/deploy-nextjs-cloudflare
+ln -s ~/Projects/agent-assets/skills/deploy-nextjs-cloudflare ~/.agents/skills/deploy-nextjs-cloudflare
 ln -s ../../.agents/skills/deploy-nextjs-cloudflare ~/.claude/skills/deploy-nextjs-cloudflare
 ```
 
@@ -104,10 +104,10 @@ skills/deploy-nextjs-cloudflare/
 
 公式プラグイン `cloudflare` の MCP サーバーが接続済み（OAuth 認証済み）なら、次を CLI コマンドの代わりに使ってよい。未接続・未認証の場合は従来どおり CLI で続行する。
 
-- **デプロイ状態確認** ─ `cloudflare-builds`（Workers Builds のビルド・デプロイ状態）。未接続時は `wrangler deployments list`。
-- **本番ログ確認** ─ `cloudflare-observability`（本番 Workers ログ・分析）。未接続時は `wrangler tail`。
-- **ドキュメント疑問点の確認** ─ `cloudflare-docs`（認証不要・常時使用可）。ドキュメント参照の第一手段としてよい。
-- **R2 バケット等のバインディング管理** ─ `cloudflare-bindings`。未接続時は `wrangler r2 bucket create` 等の CLI。
+- **デプロイ状態確認** ─ 第一手段は `wrangler deployments list`。`cloudflare` MCP の `execute` から Workers Builds API（GET）を呼んでもよい。
+- **本番ログ確認** ─ 第一手段は `wrangler tail`。`cloudflare` MCP の `execute` から Workers Observability API を呼ぶ方法は、Read only スコープで使えるか未検証。
+- **ドキュメント疑問点の確認** ─ `cloudflare` MCP の `docs` ツール（OAuth 認証が必要）。未接続時は developers.cloudflare.com を直接参照する。
+- **R2 バケット等のバインディング管理** ─ 作成は `wrangler r2 bucket create` 等の CLI。一覧・取得は `cloudflare` MCP の `execute`（GET）でもよい。Read only スコープで認証した場合、MCP からは作成できない。
 
 ---
 
@@ -165,7 +165,7 @@ npm view @opennextjs/cloudflare version
 | `next` | 16.2.10 | 16.3 系は canary/preview 段階 |
 | `@opennextjs/cloudflare` | 1.20.1 | peerDependencies: `next ">=15.5.18 <16 \|\| >=16.2.6"` / `wrangler ^4.86.0` |
 
-Next 16 系を使う場合は **16.2.6 以上が peer 要件で必須**です。OpenNext の対応状況の最新確認は、上記 `npm view` に加え、接続済みなら `cloudflare-docs` MCP 検索も併用する（認証不要・常時使用可）。
+Next 16 系を使う場合は **16.2.6 以上が peer 要件で必須**です。OpenNext の対応状況の最新確認は、上記 `npm view` に加え、接続済みなら `cloudflare` MCP の `docs` ツール（OAuth 認証が必要）も併用する。
 
 ---
 
@@ -206,7 +206,7 @@ Next 16 系を使う場合は **16.2.6 以上が peer 要件で必須**です。
 - 既知の無害警告: `assets.exclude`、`duplicate key "options"`（floating-ui 由来）
 - アセットのアップロードに時間がかかることがあるため、デプロイのタイムアウトは 10 分（600000ms）程度に設定することを推奨します
 - デプロイ後は `npx wrangler deployments list` / `npx wrangler rollback` / `npx wrangler tail` で履歴確認・ロールバック・ログ確認ができます。**ロールバックしても KV / R2 / D1 / Durable Object のデータは戻りません**
-- 接続済みなら `cloudflare-observability` MCP でも本番ログ・分析を確認できます（同時接続 10 の制約を受けない選択肢として有効）
+- `cloudflare` MCP の `execute` から Workers Observability API を呼ぶ方法もあります（同時接続 10 の制約を受けない選択肢。Read only スコープで使えるかは未検証。第一手段は `wrangler tail`）
 
 ---
 

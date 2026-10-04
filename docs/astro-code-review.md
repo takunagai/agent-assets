@@ -28,7 +28,7 @@
 git clone git@github.com:takunagai/agent-assets.git ~/Projects/agent-assets
 
 # 2) ハブ（~/.agents）から実体へ絶対 symlink
-ln -s /Users/$USER/Projects/agent-assets/skills/astro-code-review ~/.agents/skills/astro-code-review
+ln -s ~/Projects/agent-assets/skills/astro-code-review ~/.agents/skills/astro-code-review
 
 # 3) Claude Code 用に ~/.agents への相対 symlink
 ln -s ../../.agents/skills/astro-code-review ~/.claude/skills/astro-code-review
@@ -123,7 +123,7 @@ skills/astro-code-review/
 
 ## 外部リファレンス
 
-最新仕様の確認は、接続済みなら `cloudflare-docs` MCP 検索（認証不要）を第一手段とする。
+最新仕様の確認は、接続済みなら `cloudflare` MCP の `docs` ツール（OAuth 認証が必要）を第一手段とする。
 
 - [Astro 7 リリース記事](https://astro.build/blog/astro-7/)
 - [Astro v7 Upgrade Guide](https://docs.astro.build/en/guides/upgrade-to/v7/)

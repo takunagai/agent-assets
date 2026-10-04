@@ -27,7 +27,7 @@
 
 ```bash
 git clone git@github.com:takunagai/agent-assets.git ~/Projects/agent-assets
-ln -s /Users/$USER/Projects/agent-assets/skills/deploy-astro-cloudflare ~/.agents/skills/deploy-astro-cloudflare
+ln -s ~/Projects/agent-assets/skills/deploy-astro-cloudflare ~/.agents/skills/deploy-astro-cloudflare
 ln -s ../../.agents/skills/deploy-astro-cloudflare ~/.claude/skills/deploy-astro-cloudflare
 ```
 
@@ -106,9 +106,9 @@ Workers Builds が未設定の場合や、手元から直接デプロイした�
 
 公式プラグイン `cloudflare` の MCP サーバーが接続済み（OAuth 認証済み）なら、次を CLI コマンドの代わりに使ってよい。未接続・未認証の場合は従来どおり CLI で続行する。
 
-- **デプロイ状態確認** ─ `cloudflare-builds`（Workers Builds のビルド・デプロイ状態）。未接続時は `wrangler deployments list`。
-- **本番ログ確認** ─ `cloudflare-observability`（本番 Workers ログ・分析）。未接続時は `wrangler tail`。
-- **ドキュメント疑問点の確認** ─ `cloudflare-docs`（認証不要・常時使用可）。ドキュメント参照の第一手段としてよい。
+- **デプロイ状態確認** ─ 第一手段は `wrangler deployments list`。`cloudflare` MCP の `execute` から Workers Builds API（GET）を呼んでもよい。
+- **本番ログ確認** ─ 第一手段は `wrangler tail`。`cloudflare` MCP の `execute` から Workers Observability API を呼ぶ方法は、Read only スコープで使えるか未検証。
+- **ドキュメント疑問点の確認** ─ `cloudflare` MCP の `docs` ツール（OAuth 認証が必要）。未接続時は developers.cloudflare.com を直接参照する。
 
 ---
 
@@ -172,7 +172,7 @@ const apiKey = env.API_KEY;
 | ビルドは通るが本番で 500 エラー | サーバーコードで `import.meta.env` を使っていないか確認 |
 | v7 更新後にビルドが落ちる | Rust コンパイラの HTML 厳格化 / Markdown プロセッサ（Sätteri）変更 / `src/fetch.ts` 予約名衝突（`references/troubleshooting.md`） |
 | Workers Builds が失敗する | ダッシュボードの View build history でビルドログを確認 |
-| 本番でエラーが再現するがログを追いたい | 接続済みなら `cloudflare-observability` MCP で本番ログ・分析を確認。未接続時は `wrangler tail` |
+| 本番でエラーが再現するがログを追いたい | `wrangler tail` で本番ログを確認する |
 | 二重デプロイ | Workers Builds 設定済みで `--local` + push を併用していないか確認 |
 
 ---

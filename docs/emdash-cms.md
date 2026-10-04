@@ -166,10 +166,10 @@ skills/emdash-cms/
 
 公式プラグイン `cloudflare` の MCP サーバーが接続済み（OAuth 認証済み）なら、次を CLI コマンドの代わりに使います。未接続・未認証の場合は従来どおり CLI で続行します。
 
-- **Cloudflare 側仕様の裏取り** ─ `cloudflare-docs`（認証不要・常時使用可）。Email Service / Dynamic Workers / D1 の仕様確認の第一手段。EmDash 本体の仕様は docs 検索 MCP（`https://docs.emdashcms.com/mcp`）か GitHub が正本
-- **D1 / R2 / KV の作成・確認** ─ `cloudflare-bindings`。未接続時は `wrangler d1 create` 等の CLI
-- **本番ログ確認** ─ `cloudflare-observability`。未接続時は `wrangler tail`
-- **デプロイ状態確認** ─ `cloudflare-builds` は委譲先 `deploy-astro-cloudflare` 側のガイダンスに従う
+- **Cloudflare 側仕様の裏取り** ─ `cloudflare` MCP の `docs` ツール（OAuth 認証が必要。未接続時は developers.cloudflare.com を直接参照）。Email Service / Dynamic Workers / D1 の仕様確認の第一手段。EmDash 本体の仕様は docs 検索 MCP（`https://docs.emdashcms.com/mcp`）か GitHub が正本
+- **D1 / R2 / KV の作成・確認** ─ 作成は `wrangler d1 create` 等の CLI。一覧・取得は `cloudflare` MCP の `execute`（GET）でもよい。Read only スコープで認証した場合、MCP からは作成できない
+- **本番ログ確認** ─ 第一手段は `wrangler tail`。`cloudflare` MCP の `execute` から Workers Observability API を呼ぶ方法は、Read only スコープで使えるか未検証
+- **デプロイ状態確認** ─ 委譲先 `deploy-astro-cloudflare` 側のガイダンスに従う
 
 ---
 

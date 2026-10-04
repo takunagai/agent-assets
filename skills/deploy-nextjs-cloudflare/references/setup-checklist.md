@@ -79,7 +79,7 @@ wrangler r2 bucket create <WORKER_NAME>-opennext-cache
 
 `wrangler.jsonc` の `r2_buckets[].bucket_name` と一致させる。
 
-接続済みなら `cloudflare-bindings` MCP でも作成・確認可。
+一覧・取得は `cloudflare` MCP の `execute`（GET）でも可。Read only スコープで認証した場合、MCP からは作成できない。
 
 ## 5. ローカル開発設定
 
