@@ -119,8 +119,6 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 
 ### Step 1: 対象ファイル特定
 
-**ツール使用: Glob**
-
 ```
 パターン: **/*.astro
 パス: 指定されたディレクトリ、または カレントディレクトリ
@@ -141,8 +139,6 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 ---
 
 ### Step 2: 静的解析【並列実行可】
-
-**ツール使用: Read（各ファイルに対して）**
 
 各`.astro`ファイルに対し、以下のチェック項目を検査:
 
@@ -196,14 +192,14 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 ```markdown
 # Astro Code Review Report
 
-## 📁 対象ファイル
+## 対象ファイル
 - `src/pages/index.astro`
 - `src/components/Header.astro`
 （実際の対象ファイルを列挙）
 
 ---
 
-## 🚨 Critical Issues (即時対応必須)
+## Critical Issues (即時対応必須)
 
 ### [C-001] alt属性の欠如
 - **ファイル**: `src/components/Hero.astro:15`
@@ -219,11 +215,11 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
   ```
 - **参照**: [Astro Image Guide](https://docs.astro.build/en/guides/images/)
 
-（問題がない場合は「Critical Issues はありません ✅」と明記）
+（問題がない場合は「Critical Issues はありません」と明記）
 
 ---
 
-## ⚠️ Warnings (改善推奨)
+## Warnings (改善推奨)
 
 ### [W-001] Props型定義の欠如
 - **ファイル**: `src/components/Card.astro:1-5`
@@ -242,11 +238,11 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
   ```
 - **参照**: [Astro TypeScript Guide](https://docs.astro.build/en/guides/typescript/)
 
-（問題がない場合は「Warnings はありません ✅」と明記）
+（問題がない場合は「Warnings はありません」と明記）
 
 ---
 
-## 💡 Info (ベストプラクティス提案)
+## Info (ベストプラクティス提案)
 
 ### [I-001] Open Graphタグの追加推奨
 - **ファイル**: `src/pages/index.astro`
@@ -265,7 +261,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 
 ---
 
-## ✅ Good Practices Found
+## Good Practices Found
 
 以下の良い実装パターンが確認されました：
 
@@ -277,7 +273,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 
 ---
 
-## 📊 サマリー
+## サマリー
 
 ### 問題数集計
 
@@ -302,19 +298,19 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 
 | 評価項目 | 状態 |
 |----------|------|
-| セキュリティ | ✅ 良好 |
-| アクセシビリティ | 🚨 要対応（Critical 1件） |
-| パフォーマンス | ⚠️ 要改善 |
-| 型安全性 | ⚠️ 要改善 |
-| SEO | ⚠️ 要改善 |
-| レガシー API (5→6) | ✅ 良好 |
-| Astro 7 移行 (6→7) | ✅ 良好 |
-| Cloudflare 対応 | ✅ 良好 |
-| 依存・セキュリティ勧告 | ✅ 良好 |
+| セキュリティ | 良好 |
+| アクセシビリティ | 要対応（Critical 1件） |
+| パフォーマンス | 要改善 |
+| 型安全性 | 要改善 |
+| SEO | 要改善 |
+| レガシー API (5→6) | 良好 |
+| Astro 7 移行 (6→7) | 良好 |
+| Cloudflare 対応 | 良好 |
+| 依存・セキュリティ勧告 | 良好 |
 
 ---
 
-## 📚 参考資料
+## 参考資料
 
 ### Astro 7
 - [Astro 公式ドキュメント](https://docs.astro.build/)
@@ -344,7 +340,7 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 
 レポート末尾のサマリーで以下を必ず含める:
 - カテゴリ別の問題数集計テーブル
-- 総合評価（✅良好 / ⚠️要改善 / 🚨要対応）
+- 総合評価（良好 / 要改善 / 要対応）
 - 優先的に対応すべき項目のハイライト
 
 ---
@@ -367,13 +363,13 @@ description: "Astro 7+ コードレビュースキル。Astroプロジェクト�
 ### 自動修正対象（確認なしで適用）
 | 問題 | 修正内容 |
 |------|----------|
-| `alt` 属性の欠如 | `alt="TODO: 画像の説明を追加"` を挿入 |
 | `<html lang>` の欠如 | `<html lang="ja">` に変更 |
 | `loading` 属性の欠如 | `loading="lazy"` を追加（Above-the-fold以外） |
 
 ### 確認後に適用
 | 問題 | 修正内容 |
 |------|----------|
+| `alt` 属性の欠如 | alt の文案を提示し、ユーザー確認後に挿入（`alt="TODO"` 等の仮文言を自動挿入しない） |
 | Props 型定義の欠如 | スケルトンの `interface Props {}` を生成（ユーザー確認後） |
 | `<img>` → `<Image>` 変換 | import文追加と置換（ユーザー確認後） |
 

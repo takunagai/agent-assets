@@ -40,7 +40,7 @@ Cloudflare 学習カリキュラムを 1 セクションずつ対話形式で進
 そのセクションで扱うプロダクトについて、授業を始める前に現状を一次情報で確認する。**pre-training の知識で断定しない（retrieval 優先）**。これは本スキルの中核的な規律。
 
 - **確認先**: CURRICULUM.md の各セクションに書かれた参照先を使う
-  - ローカルの Cloudflare 公式スキル群（`cloudflare` とその `references/<product>`、`wrangler`、`workers-best-practices`、`durable-objects`、`agents-sdk`、`sandbox-sdk`、`turnstile-spin`、`cloudflare-email-service` 等）
+  - ローカルの Cloudflare 公式スキル群（`cloudflare` とその `references/<product>`、`wrangler`、`workers-best-practices`、`durable-objects`、`agents-sdk`、`sandbox-stable`（次期版は `sandbox-next`）、`turnstile-spin`、`cloudflare-email-service` 等）
   - 公式ドキュメント（developers.cloudflare.com、Cloudflare 公式ブログ、changelog）
 - **必ず一次情報で確認する項目**: 価格・上限値・API 署名・GA / ベータ / プレビューの状態。確認した日付を控える（保存時にノート frontmatter の `verified` へ反映される）
 - **フレームワーク側の情報はフレームワーク公式 docs を正とする（一般則）**: Cloudflare docs のフレームワークガイドは滞留しうる。両者が食い違ったらフレームワーク公式を信じる

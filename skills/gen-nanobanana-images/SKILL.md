@@ -120,13 +120,15 @@ For industry-specific templates and advanced techniques, see `references/prompt-
 
 ## Post-Generation Verification
 
-**After every generation, open each produced image with the Read tool and verify it.** This is mandatory, not optional. Check:
+**After every generation, open each produced image with the Read tool and check:**
 
 - **(a) Match** — Does the image match what was requested (subject, composition, ratio)?
 - **(b) Text integrity** — Are any in-image text strings free of typos / garbled characters? Japanese text is especially prone to corruption.
 - **(c) Breakage** — Any broken hands, faces, letters, or composition artifacts?
 
 If in-image text is garbled, either **regenerate** (wrap the text in `「」`/double quotes, shorten it, specify font) or advise the user to **overlay the text afterward in Figma/Photoshop**. Do not deliver an image with garbled text without flagging it.
+
+検証後、`open <path>` か Artifact でユーザーに見せてから承認を求める。
 
 ## Generation Record (生成記録.md) — Mandatory
 
@@ -172,7 +174,7 @@ Generate a new image from a text prompt.
 ```bash
 python3 scripts/generate_image.py \
   -p "A red apple on a white marble surface. Soft studio lighting. Photorealistic." \
-  -o ./output
+  -o ~/Downloads/<名前>
 ```
 
 **Pro / テキスト描画 / `-N` 複数生成の実行例、全フラグ・制約・`config.json` の詳細**: [references/cli-and-config.md](references/cli-and-config.md) を Read
