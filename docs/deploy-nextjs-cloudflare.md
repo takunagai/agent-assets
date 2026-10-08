@@ -189,7 +189,7 @@ Next 16 系を使う場合は **16.2.6 以上が peer 要件で必須**です。
 
 ### secrets の扱い
 
-機密情報は `wrangler.jsonc` の `vars` に書かず、`wrangler secret put <KEY>` で登録してください。`.dev.vars` / `.env` はコミット禁止です。
+機密情報は `wrangler.jsonc` の `vars` に書かないでください。本番の secret はユーザーが別ターミナルで `wrangler secret put <KEY>` を対話入力します（即時デプロイを伴うため、エージェントは実行しません）。`.dev.vars` / `.env` はコミット禁止です。
 
 ### deploy-astro-cloudflare との使い分け
 

@@ -115,6 +115,6 @@ Next 16 系を使う場合は **16.2.6 以上が peer 要件で必須**。OpenNe
 ## 注意事項
 
 - `wrangler.jsonc` に `keep_vars: true` を設定する（デプロイでダッシュボード側の環境変数が消えるのを防ぐ。deploy-astro-cloudflare と同趣旨）
-- 機密情報は `vars` に書かず `wrangler secret put` で登録する。`.dev.vars` はコミット禁止
+- 機密情報は `vars` に書かない。本番の secret はユーザーが別ターミナルで `wrangler secret put <KEY>` を対話入力する（即時デプロイを伴う。手順は `~/.claude/rules/secret-injection.md`。エージェントは実行しない）。`.dev.vars` はコミット禁止
 - 既知の無害警告: `assets.exclude`、`duplicate key "options"`（floating-ui 由来）
 - デプロイのタイムアウトは 600000ms（10 分）に設定すること

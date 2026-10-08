@@ -36,7 +36,7 @@ Drive の共有フォルダを AI に辿らせると、ふつうは chrome-devto
 
 ## 壊れたとき
 
-HTML スクレイピングなので、Drive が DOM を変えると列挙が 0 件になる。代替は Drive API v3（公開ファイルなら API キーだけで `files?q='<ID>'+in+parents`）。こちらのほうが堅いが API キーの用意が要る。
+HTML スクレイピングなので、Drive が DOM を変えると列挙が 0 件になる。代替は Drive API v3（公開ファイルなら API キーだけで `files?q='<ID>'+in+parents`。キーは URL に書かず `X-Goog-Api-Key` ヘッダーで渡す）。こちらのほうが堅いが API キーの用意が要る。
 
 列挙が 0 件になる原因は「非公開」「ID 違い」「HTML 変更」の 3 つ。まず共有設定を疑い、非公開ならそこで初めて chrome-devtools に切り替える。
 

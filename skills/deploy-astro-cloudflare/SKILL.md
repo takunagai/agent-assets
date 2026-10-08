@@ -178,9 +178,9 @@ npx wrangler versions upload --preview-alias staging
 
 - **ランタイム値の読み取り**: サーバーコードでは `import { env } from 'cloudflare:workers';` で環境変数・バインディング（`env.MY_KV` 等）に直接アクセスする。型安全にするなら `astro.config` でスキーマ定義し `import { MY_VAR } from 'astro:env/server';` を使う。
 - **`import.meta.env` の罠**: `import.meta.env` はビルド時にインライン化されるため、**ランタイム値（ダッシュボードの vars / secrets）は読めない**。サーバーで動的な値が必要なら必ず `cloudflare:workers` の `env` を使う。
-- **secrets**: 本番は `wrangler secret put <KEY>`、ローカル開発は `.dev.vars`（gitignore 必須）。公開してよい値は `wrangler.jsonc` の `vars`。
+- **secrets**: 本番の secret はユーザーが別ターミナルで `wrangler secret put <KEY>` を対話入力する（即時デプロイを伴う。手順は `~/.claude/rules/secret-injection.md`。エージェントは実行しない）、ローカル開発は `.dev.vars`（gitignore 必須）。公開してよい値は `wrangler.jsonc` の `vars`。
 - **`keep_vars: true`**: `wrangler deploy` はデフォルトでダッシュボード設定の環境変数を上書き・削除する。ダッシュボード管理の vars を使う運用では必須。
-- **機密値をレスポンス・コミットに載せない**。参照（`ファイル名:行番号`）かマスク表示で代替する。
+- **機密値はレスポンス・コミット・ログに載せない**。マスク表示も使わず、キー名と存在の有無だけを書く。
 
 > [!note] `Astro.locals.runtime` は削除済み
 > 旧構成（Astro 5 / 6・adapter v13 以前）の `Astro.locals.runtime.env` は削除済み API。移行対象であり、新規コードでは使わない（`cloudflare:workers` の `env` へ移行する）。

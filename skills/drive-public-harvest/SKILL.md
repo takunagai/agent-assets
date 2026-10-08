@@ -90,7 +90,7 @@ subprocess.run(["magick", "montage", *thumbs, "-tile", "5x", "-geometry", "+6+6"
 | 画像なのに拾えない | **拡張子なしのファイル名**（`01` `02`）がある。名前で判定せずマジックバイトで見る（スクリプトはそうしている） |
 | `想定外の型 text/html` | 100MB 超のファイルは確認ページ（`confirm=` トークン）を返す。返った HTML から `confirm` の値を拾って `&confirm=<値>` を付け直す。数が少なければブラウザで落とすほうが早い |
 | フォルダとファイルの判別が狂う | 判別は `href` が `/drive/folders/` を指すかで行う。**アイコン画像では判別できない** |
-| スクリプト自体が壊れた | Drive の HTML 構造が変わった。代替は Drive API v3 ─ 公開ファイルなら API キーだけで `https://www.googleapis.com/drive/v3/files?q='<FOLDER_ID>'+in+parents&key=<API_KEY>`。こちらのほうが堅いが API キーの用意が要る |
+| スクリプト自体が壊れた | Drive の HTML 構造が変わった。代替は Drive API v3 ─ 公開ファイルなら API キーだけで `curl -H "X-Goog-Api-Key: $DRIVE_API_KEY" "https://www.googleapis.com/drive/v3/files?q='<FOLDER_ID>'+in+parents"`。キーは URL に書かずヘッダーで渡し、値を表示しない（環境変数 `DRIVE_API_KEY` はユーザーが用意する）。こちらのほうが堅いが API キーの用意が要る |
 | モンタージュのタイル数が枚数と合わない | **アニメーション GIF がコマ数ぶん展開されている**。`magick "<file>[0]"` で 1 コマ目だけ指定する |
 | `magick "$f[0]"` が空文字になる | **zsh は `"$f[0]"` を配列添字として解釈する**（`$f` の 0 番目 = 空）。`"${f}[0]"` にするか、Python から subprocess で渡す。実例: 2026-09-05 にこれで montage が 0 枚になった |
 | フォルダ名は合っているのに目的の機種が無い | 配布元がセット品・シリーズ単位でフォルダを切っていることがある。実例: 「ロックUltra 顔認証セット」には**ロック本体が主役の写真が 1 枚も無かった**（中身は顔認証パッドの訴求画像）。フォルダ名を根拠にせず、中身を見てから機種を確定する。無ければ**素直に見送る** |
