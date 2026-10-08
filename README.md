@@ -97,7 +97,7 @@ ln -s ~/Projects/agent-assets/scripts/<name> ~/.claude/scripts/<name>
 
 | サブエージェント | 概要 | ドキュメント |
 |------------------|------|-------------|
-| git-version-control | コミット・ブランチ・PR を独立コンテキストで実行。手順は git-workflow スキルに従う（Conventional Commits の日本語コミット、コミット前チェック、AI 署名なし）。作業完了時にプロアクティブに起動してコミットを提案する | [docs/git-version-control.md](docs/git-version-control.md) |
+| git-version-control | コミット・ブランチ・PR を独立コンテキストで実行。手順は git-workflow スキルに従う（Conventional Commits の日本語コミット、コミット前チェック、AI 署名なし）。作業完了時に自発的に起動してよいが提案まで（commit 実行はユーザーの明示依頼後） | [docs/git-version-control.md](docs/git-version-control.md) |
 | explorer | 読み取り専用の探索専任（model: sonnet / effort: medium）。複数ファイル横断調査・仕様/ログ読解・Web リサーチを引き受け、path:line 参照付きの構造化サマリのみを返す。8 回以上の連続読み取り・5 ファイル以上の調査で委譲推奨 | [docs/explorer.md](docs/explorer.md) |
 | scanner | 機械的スキャン専任（model: haiku / effort: low）。解釈不要な grep 列挙・件数集計・シンボル使用箇所の列挙を行う。判断が必要になったら explorer への委譲を提案する | [docs/scanner.md](docs/scanner.md) |
 
