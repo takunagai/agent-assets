@@ -90,6 +90,7 @@ ln -s ~/Projects/agent-assets/scripts/<name> ~/.claude/scripts/<name>
 | handover-scaffold | 別セッションで無人実行させる「指示書（引き継ぎドキュメント）」の骨組みを一発生成。`handover/` バッチのフォルダ・`00_実行順.md` マニフェスト・指示書スケルトンを規約どおりに作成 | [docs/handover-scaffold.md](docs/handover-scaffold.md) |
 | koboyo-icon-jp | 日本語の依頼から koboyo の手描き SVG アイコン（71,238 点 / 111 カテゴリ）を探して配置。koboyo の検索は英語のみのため、主題語の英訳辞書（直訳が滑る語 / カタカナの罠 / 抽象語の比喩化）と 111 カテゴリの日本語逆引き表を同梱。候補は実物のコンタクトシート HTML（実寸比保持・ライト/ダーク切替・番号付き・Artifact 対応）で見せてから採用する運用を必須化。要 koboyo-icons MCP | [docs/koboyo-icon-jp.md](docs/koboyo-icon-jp.md) |
 | emdash-cms | EmDash（Astro + Cloudflare の full-stack TypeScript CMS、emdash 0.29 基準）の構築支援。セットアップ・コンテンツモデリング・クエリ / Portable Text・認証・プラグイン開発（sandboxed / native）・メール（公式 `cloudflareEmail()` + Email Service）・Forms・WordPress 移行・MCP 連携。v0.x ベータのため鮮度検証手順を内蔵 | [docs/emdash-cms.md](docs/emdash-cms.md) |
+| persona-sheet | 非技術者のビジネスパーソンが自分の AI に入れて使うペルソナ作成スキル。サイト・資料・聞き取りから事業情報を「ナレッジ」に蓄え、顧客ペルソナを何人でも作り、A4・1 人 1 ページのシート（＋全員比較の一覧ページ）にする。出力は Markdown / HTML / PDF / アーティファクト / JSON / YAML。Claude（アプリ・Cowork・Code）・Codex・Antigravity で動作確認済み。HTML マニュアル・配布 zip の組み立てスクリプト付き。CC BY 4.0（作者表示必須） | [docs/persona-sheet.md](docs/persona-sheet.md) |
 
 ## サブエージェント一覧
 
