@@ -15,7 +15,6 @@ AI エージェント（Claude Code / Codex / Gemini CLI / Cursor など）用�
 | スキル本体（AI 実行資産: `SKILL.md` / `references/` / `scripts/` / `assets/`） | `skills/<name>/` |
 | サブエージェント（1 体 1 ファイル） | `agents/<name>.md` |
 | 人間向けマニュアル | `docs/<name>.md` |
-| スキル付属の HTML マニュアル・見本画像（配布物の元。配布用 zip はスクリプトで `docs/<name>/` から組み立てる） | `docs/<name>/` |
 | 共有リソースライブラリ（スキルではない） | `skills/_<name>/` |
 
 - **`skills/<name>/` 配下に README 等の人間向け文書を作らない**。人間向けドキュメントの新規作成・更新は、必ず既存の `docs/<name>.md` を第一候補にする
