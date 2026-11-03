@@ -2,6 +2,8 @@
 
 AI エージェント（Claude Code / Codex / Gemini CLI / Cursor など）で使える自作スキル・サブエージェントの公開モノレポです。
 
+persona-sheet のマニュアルは、[見やすい方（アーティファクト）](https://claude.ai/artifact/2Q8jJCXmYytGEecYuJ5fsw)でも読めます。リポジトリ内の同じ内容は [docs/persona-sheet.md](docs/persona-sheet.md) です。
+
 公開できるものだけをここに収録しています。案件固有・個人運用などの非公開スキルは、同じディレクトリ構造（`skills/<name>/` + `docs/<name>.md`）のまま、別プロジェクトとして管理しています。
 
 ## 設計方針
